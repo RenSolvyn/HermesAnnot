@@ -81,6 +81,7 @@
     }
   }
 
+  html { overflow-x: hidden; }
   body {
     font-family: system-ui, -apple-system, sans-serif;
     background: #0a0a14;
@@ -215,7 +216,7 @@
     margin-bottom: 16px;
   }
 
-  .screen { display: none; }
+  .screen { display: none; overflow-x: hidden; }
   .screen.active { display: block; }
 
   /* ── Glass cards (load screen) ── */
@@ -377,10 +378,17 @@
   }
 
   /* ── Progress bar ── */
-  .progress-bar { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .progress-bar { display: flex; align-items: center; gap: 10px; margin-bottom: 2px; }
   .progress-track { flex: 1; height: 5px; background: var(--bg-muted); border-radius: 3px; overflow: hidden; }
   .progress-fill { height: 100%; background: var(--blue); border-radius: 3px; transition: width 0.25s ease; }
   .progress-text { font-size: 13px; color: var(--text-dim); min-width: 70px; text-align: right; }
+  .progress-overall {
+    display: flex; align-items: center; gap: 8px; margin-bottom: 10px;
+    padding: 0 38px; /* align under the track (past the ← button) */
+  }
+  .progress-overall-track { flex: 1; height: 2px; background: var(--bg-muted); border-radius: 1px; overflow: hidden; }
+  .progress-overall-fill { height: 100%; background: var(--text-dim); border-radius: 1px; transition: width 0.5s ease; opacity: 0.5; }
+  .progress-overall-text { font-size: 11px; color: var(--text-dim); opacity: 0.7; white-space: nowrap; }
 
   /* ── Feature badge ── */
   .feature-badge {
@@ -569,6 +577,58 @@
   .reason-bar-track { flex: 1; height: 12px; background: var(--bg-muted); border-radius: 6px; overflow: hidden; }
   .reason-bar-fill { height: 100%; background: var(--amber); border-radius: 6px; transition: width 0.3s; }
   .reason-bar-count { font-size: 11px; color: var(--text-faint); min-width: 20px; }
+
+  /* ── Chunk break / gamification ── */
+  .chunk-overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.75); z-index: 100;
+    display: flex; align-items: center; justify-content: center;
+    animation: chunkFadeIn 0.3s ease;
+  }
+  @keyframes chunkFadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+  .chunk-card {
+    background: var(--bg); border-radius: 20px; padding: 32px 28px;
+    max-width: 380px; width: 90%; text-align: center;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+    animation: chunkPop 0.4s cubic-bezier(0.16,1,0.3,1);
+  }
+  @keyframes chunkPop { from { transform: scale(0.85) translateY(20px); opacity: 0; } to { transform: scale(1) translateY(0); opacity: 1; } }
+
+  .chunk-emoji { font-size: 48px; margin-bottom: 12px; display: block;
+    animation: chunkBounce 0.6s ease 0.3s both; }
+  @keyframes chunkBounce { 0% { transform: scale(0); } 50% { transform: scale(1.3); } 100% { transform: scale(1); } }
+
+  .chunk-title { font-size: 20px; font-weight: 700; margin-bottom: 6px; color: var(--text); }
+  .chunk-subtitle { font-size: 13px; color: var(--text-dim); margin-bottom: 16px; line-height: 1.5; }
+
+  .chunk-stats {
+    display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 20px;
+  }
+  .chunk-stat {
+    padding: 10px 6px; border-radius: 10px; background: var(--bg-subtle);
+  }
+  .chunk-stat-value { font-size: 20px; font-weight: 700; display: block; color: var(--text); }
+  .chunk-stat-label { font-size: 10px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; }
+
+  .chunk-progress-outer {
+    height: 8px; background: var(--bg-muted); border-radius: 4px; margin-bottom: 16px; overflow: hidden;
+  }
+  .chunk-progress-inner {
+    height: 100%; border-radius: 4px; transition: width 0.8s cubic-bezier(0.16,1,0.3,1);
+    background: linear-gradient(90deg, var(--green), var(--blue));
+  }
+
+  .chunk-milestone { 
+    display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 11px;
+    font-weight: 600; letter-spacing: 0.5px; margin-bottom: 12px;
+    background: var(--amber-bg); color: var(--amber); border: 1px solid var(--amber-border);
+  }
+
+  .streak-display {
+    font-size: 11px; color: var(--text-faint); text-align: center; margin-top: 2px;
+  }
+  .streak-fire { color: var(--amber); font-weight: 600; }
 </style>
 </head>
 <body>
@@ -639,6 +699,10 @@
     <button class="btn-small" onclick="saveProgressToFile()">Save</button>
     <button class="btn-small" onclick="showStats()">Stats</button>
   </div>
+  <div class="progress-overall" id="progress-overall">
+    <div class="progress-overall-track"><div class="progress-overall-fill" id="progress-overall-fill"></div></div>
+    <span class="progress-overall-text" id="progress-overall-text"></span>
+  </div>
   <div class="feature-badge" id="feature-badge"></div>
   <div class="sentence-card" id="sentence-card"><p id="sentence-text"></p></div>
   <div class="label-row">
@@ -674,7 +738,11 @@
   <div class="undo-row"><button class="undo-btn" id="undo-btn" onclick="undoLastResponse()" disabled>Undo last</button></div>
   <p class="keyboard-hints" id="keyboard-hints">← wrong · ↓ unsure · → correct · backspace undo · (on wrong: 1-9 label, esc skip) · (on reason: enter done)</p>
   <div class="timer-display" id="timer-display"></div>
+  <div class="streak-display" id="streak-display"></div>
 </div>
+
+<!-- Chunk break overlay -->
+<div id="chunk-overlay" class="chunk-overlay" style="display:none"></div>
 
 <!-- ═══ SCREEN 3: Stats ═══ -->
 <div id="screen-stats" class="screen" role="main" aria-label="Audit statistics">
@@ -817,6 +885,13 @@ var originalResponseCount = 0; // cached — updated in record/undo, not recompu
 var processingResponse = false; // debounce flag — prevents double-tap
 var reviewerName = "";
 
+// ── Gamification state ──
+var CHUNK_SIZE = 25;  // items per chunk before break
+var chunkItemCount = 0;  // items reviewed in current chunk
+var currentStreak = 0;  // consecutive items without skipping (unsure)
+var longestStreak = 0;
+var totalSessionItems = 0;  // total items done this session (for messages)
+
 
 // ═══════════════════════════════════════════════════════════
 // INIT
@@ -868,6 +943,15 @@ var reviewerName = "";
   });
 
   document.addEventListener("keydown", function(e) {
+    // Chunk break overlay: Enter/Space/Escape to dismiss
+    var chunkOv = document.getElementById("chunk-overlay");
+    if (chunkOv && chunkOv.style.display !== "none") {
+      if (e.key === "Enter" || e.key === " " || e.key === "Escape") {
+        dismissChunkBreak(); e.preventDefault();
+      }
+      return;
+    }
+
     if (!document.getElementById("screen-review").classList.contains("active")) return;
 
     // During correction flow: number keys select options, Escape skips
@@ -1530,9 +1614,24 @@ function _renderCurrentItemInner() {
   document.getElementById("reason-section").style.display = "none";
 
   var reviewed = countOriginalResponses();
-  var pct = Math.min(100, (reviewed / originalItemCount) * 100);
-  document.getElementById("progress-fill").style.width = pct + "%";
-  document.getElementById("progress-text").textContent = reviewed + "/" + originalItemCount;
+  var overallPct = Math.min(100, (reviewed / originalItemCount) * 100);
+
+  if (CHUNK_SIZE <= 90000) {
+    // Chunked mode: main bar = chunk progress, secondary = overall
+    var chunkPos = chunkItemCount;  // items reviewed in current chunk
+    var chunkPct = Math.min(100, (chunkPos / CHUNK_SIZE) * 100);
+    document.getElementById("progress-fill").style.width = chunkPct + "%";
+    document.getElementById("progress-text").textContent = chunkPos + " / " + CHUNK_SIZE;
+    document.getElementById("progress-overall").style.display = "";
+    document.getElementById("progress-overall-fill").style.width = overallPct + "%";
+    document.getElementById("progress-overall-text").textContent =
+      reviewed + " of " + originalItemCount + " overall (" + Math.round(overallPct) + "%)";
+  } else {
+    // Test / unchunked mode: main bar = overall, hide secondary
+    document.getElementById("progress-fill").style.width = overallPct + "%";
+    document.getElementById("progress-text").textContent = reviewed + "/" + originalItemCount;
+    document.getElementById("progress-overall").style.display = "none";
+  }
 
   var itemIndex = shuffledOrder[currentIndex];
   var item = dataset.items[itemIndex];
@@ -1608,9 +1707,10 @@ function recordResponse(verdict) {
   }
 
   currentIndex++;
+  updateStreak(verdict);
   persistResponses();
   processingResponse = false;
-  if (currentIndex >= shuffledOrder.length) showStats(); else renderCurrentItem();
+  advanceToNext();
 }
 
 
@@ -1690,11 +1790,151 @@ function submitReason() {
   }
 
   awaitingReason = false;
+  var lastVerdict = pendingReasonKey && responses[pendingReasonKey] ? responses[pendingReasonKey].human_verdict : "unsure";
   pendingReasonKey = null;
   document.getElementById("reason-section").style.display = "none";
   currentIndex++;
+  updateStreak(lastVerdict);
   persistResponses();
-  if (currentIndex >= shuffledOrder.length) showStats(); else renderCurrentItem();
+  advanceToNext();
+}
+
+
+// ═══════════════════════════════════════════════════════════
+// GAMIFICATION — Chunk breaks, streaks, milestones
+// ═══════════════════════════════════════════════════════════
+
+var CHUNK_MESSAGES = [
+  { emoji: "🔥", title: "Nice chunk!", msgs: ["You're in the zone.", "Steady pace, great focus.", "Keep that rhythm going."] },
+  { emoji: "⚡", title: "Power move!", msgs: ["That batch flew by.", "You make this look easy.", "Crushing it."] },
+  { emoji: "🎯", title: "Sharp eyes!", msgs: ["Your attention to detail shows.", "Quality reviews, every one.", "The data thanks you."] },
+  { emoji: "🧠", title: "Big brain time!", msgs: ["Linguistic instincts on point.", "You're reading like a pro.", "Pattern recognition: elite."] },
+  { emoji: "💪", title: "Unstoppable!", msgs: ["Nothing gets past you.", "Machine-level consistency.", "The algorithm fears you."] },
+  { emoji: "🌟", title: "Star reviewer!", msgs: ["Top-tier annotation work.", "This is what quality looks like.", "Future datasets will thank you."] },
+];
+
+var MILESTONE_MESSAGES = {
+  25:  { emoji: "🚀", title: "Liftoff!", msg: "25% done — you've built momentum." },
+  50:  { emoji: "⛰️", title: "Halfway there!", msg: "50% done — all downhill from here." },
+  75:  { emoji: "🏁", title: "Home stretch!", msg: "75% done — the finish line is in sight." },
+  90:  { emoji: "🔬", title: "Almost there!", msg: "90% done — just a handful left." },
+  100: { emoji: "🏆", title: "Complete!", msg: "You did it. Every single item. Legend." },
+};
+
+function updateStreak(verdict) {
+  if (verdict === "correct" || verdict === "wrong") {
+    currentStreak++;
+    if (currentStreak > longestStreak) longestStreak = currentStreak;
+  } else {
+    currentStreak = 0;
+  }
+  chunkItemCount++;
+  totalSessionItems++;
+  updateStreakDisplay();
+}
+
+function updateStreakDisplay() {
+  var el = document.getElementById("streak-display");
+  if (!el) return;
+  if (currentStreak >= 5) {
+    el.innerHTML = '<span class="streak-fire">🔥 ' + currentStreak + ' streak</span>';
+  } else {
+    el.textContent = "";
+  }
+}
+
+function advanceToNext() {
+  if (currentIndex >= shuffledOrder.length) { showStats(); return; }
+
+  // If chunk breaks disabled (testing), skip all gamification
+  if (CHUNK_SIZE > 90000) { renderCurrentItem(); return; }
+
+  var reviewed = countOriginalResponses();
+  var pct = Math.round((reviewed / originalItemCount) * 100);
+
+  // Check milestones (25%, 50%, 75%, 90%, 100%)
+  var prevPct = Math.round(((reviewed - 1) / originalItemCount) * 100);
+  var milestoneHit = null;
+  [25, 50, 75, 90].forEach(function(m) {
+    if (pct >= m && prevPct < m) milestoneHit = m;
+  });
+
+  // Check chunk break
+  if (milestoneHit) {
+    showChunkBreak(milestoneHit);
+  } else if (chunkItemCount >= CHUNK_SIZE) {
+    showChunkBreak(null);
+  } else {
+    renderCurrentItem();
+  }
+}
+
+function showChunkBreak(milestone) {
+  chunkItemCount = 0;
+  var reviewed = countOriginalResponses();
+  var pct = Math.round((reviewed / originalItemCount) * 100);
+  var remaining = originalItemCount - reviewed;
+
+  // Pick content
+  var emoji, title, msg;
+  if (milestone && MILESTONE_MESSAGES[milestone]) {
+    var m = MILESTONE_MESSAGES[milestone];
+    emoji = m.emoji;
+    title = m.title;
+    msg = m.msg;
+  } else {
+    var bundle = CHUNK_MESSAGES[Math.floor(Math.random() * CHUNK_MESSAGES.length)];
+    emoji = bundle.emoji;
+    title = bundle.title;
+    msg = bundle.msgs[Math.floor(Math.random() * bundle.msgs.length)];
+  }
+
+  // Count stats for recent chunk
+  var recentResponses = Object.values(responses);
+  recentResponses.sort(function(a, b) { return (a.reviewed_at || "") > (b.reviewed_at || "") ? -1 : 1; });
+  var recent = recentResponses.slice(0, CHUNK_SIZE);
+  var chunkCorrect = recent.filter(function(r) { return r.human_verdict === "correct"; }).length;
+  var chunkWrong = recent.filter(function(r) { return r.human_verdict === "wrong"; }).length;
+  var chunkUnsure = recent.filter(function(r) { return r.human_verdict === "unsure"; }).length;
+
+  var overlay = document.getElementById("chunk-overlay");
+  overlay.innerHTML =
+    '<div class="chunk-card">' +
+      (milestone ? '<div class="chunk-milestone">MILESTONE — ' + pct + '%</div><br>' : '') +
+      '<span class="chunk-emoji">' + emoji + '</span>' +
+      '<div class="chunk-title">' + esc(title) + '</div>' +
+      '<div class="chunk-subtitle">' + esc(msg) + '</div>' +
+      '<div class="chunk-progress-outer"><div class="chunk-progress-inner" id="chunk-progress-bar" style="width:0%"></div></div>' +
+      '<div class="chunk-stats">' +
+        '<div class="chunk-stat"><span class="chunk-stat-value">' + reviewed + '</span><span class="chunk-stat-label">Done</span></div>' +
+        '<div class="chunk-stat"><span class="chunk-stat-value">' + remaining + '</span><span class="chunk-stat-label">Left</span></div>' +
+        '<div class="chunk-stat"><span class="chunk-stat-value">' + (longestStreak >= 5 ? '🔥' + longestStreak : '—') + '</span><span class="chunk-stat-label">Best streak</span></div>' +
+      '</div>' +
+      '<div class="chunk-stats" style="grid-template-columns:1fr 1fr 1fr;margin-bottom:16px">' +
+        '<div class="chunk-stat"><span class="chunk-stat-value" style="color:var(--green)">' + chunkCorrect + '</span><span class="chunk-stat-label">Correct</span></div>' +
+        '<div class="chunk-stat"><span class="chunk-stat-value" style="color:var(--red)">' + chunkWrong + '</span><span class="chunk-stat-label">Wrong</span></div>' +
+        '<div class="chunk-stat"><span class="chunk-stat-value" style="color:var(--amber)">' + chunkUnsure + '</span><span class="chunk-stat-label">Unsure</span></div>' +
+      '</div>' +
+      '<button class="btn-primary" onclick="dismissChunkBreak()" style="margin-top:0">Continue →</button>' +
+      (reviewed > CHUNK_SIZE ? '<button class="btn-secondary" onclick="dismissChunkBreak();saveProgressToFile()" style="margin-top:8px">💾 Save & continue</button>' : '') +
+      (remaining > 50 ? '<p style="font-size:11px;color:var(--text-faint);margin-top:12px">~' + Math.ceil(remaining * 7 / 60) + ' min left at your pace</p>' : '') +
+    '</div>';
+  overlay.style.display = "flex";
+
+  // Animate progress bar
+  requestAnimationFrame(function() {
+    setTimeout(function() {
+      var bar = document.getElementById("chunk-progress-bar");
+      if (bar) bar.style.width = pct + "%";
+    }, 100);
+  });
+}
+
+function dismissChunkBreak() {
+  var overlay = document.getElementById("chunk-overlay");
+  overlay.style.display = "none";
+  overlay.innerHTML = "";
+  renderCurrentItem();
 }
 
 
@@ -1711,6 +1951,9 @@ function undoLastResponse() {
   var key = (isProbe ? "probe_" : "") + item.feature + "_" + itemIndex;
   if (responses[key] && !isProbe) originalResponseCount--;
   delete responses[key];
+  if (chunkItemCount > 0) chunkItemCount--;
+  currentStreak = 0; // can't reliably reconstruct streak after undo
+  updateStreakDisplay();
   persistResponses();
   renderCurrentItem();
 }
