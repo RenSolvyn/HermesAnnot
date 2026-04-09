@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:">
 <title>HERMES</title>
 <style>
   /* ═══════════════════════════════════════════════════════════
@@ -757,7 +758,7 @@
   <div class="progress-bar">
     <button class="btn-small" onclick="goBackToLoad()" title="Change file">&larr;</button>
     <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
-    <span class="progress-text" id="progress-text"></span>
+    <span class="progress-text" id="progress-text" role="status" aria-live="polite"></span>
     <button class="btn-small" onclick="saveProgressToFile()">Save</button>
     <button class="btn-small" onclick="showStats()">Stats</button>
   </div>
@@ -766,7 +767,7 @@
     <span class="progress-overall-text" id="progress-overall-text"></span>
   </div>
   <div class="feature-badge" id="feature-badge"></div>
-  <div class="sentence-card" id="sentence-card"><p id="sentence-text"></p></div>
+  <div class="sentence-card" id="sentence-card" aria-live="polite" aria-atomic="true"><p id="sentence-text"></p></div>
   <div class="label-row">
     <span class="label-text">Label:</span>
     <span class="label-value" id="auto-label"></span>
@@ -783,7 +784,7 @@
     </div>
   </div>
 
-  <div id="correction-section" style="display:none">
+  <div id="correction-section" style="display:none" aria-live="assertive">
     <p class="correction-prompt">What should the label be?</p>
     <div class="correction-row" id="correction-options"></div>
     <div style="text-align:center">
@@ -791,7 +792,7 @@
     </div>
   </div>
 
-  <div id="reason-section" style="display:none">
+  <div id="reason-section" style="display:none" aria-live="assertive">
     <p class="reason-prompt">Why? (optional — tap one or type)</p>
     <div class="reason-row" id="reason-chips"></div>
     <input class="reason-comment" id="reason-comment" type="text" placeholder="Other reason (optional)" maxlength="120">
@@ -801,7 +802,7 @@
   <div class="undo-row"><button class="undo-btn" id="undo-btn" onclick="undoLastResponse()" disabled>Undo last</button></div>
   <p class="keyboard-hints" id="keyboard-hints">← wrong · ↓ unsure · → correct · backspace undo · (on wrong: 1-9 label, esc skip) · (on reason: enter done)</p>
   <div class="timer-display" id="timer-display"></div>
-  <div class="streak-display" id="streak-display"></div>
+  <div class="streak-display" id="streak-display" aria-live="polite"></div>
 </div>
 
 <!-- Chunk break overlay -->
@@ -2614,7 +2615,7 @@ function renderConsistency() {
     '<p>' + result.matches + ' of ' + result.total_probes + ' re-tested items got the same verdict.</p>';
   if (result.mismatches.length > 0) {
     html += '<p style="margin-top:6px;font-size:11px;color:var(--text-faint)">Mismatches: ' +
-      result.mismatches.map(function(m) { return m.feature + '[' + m.index + '] ' + m.original + '→' + m.probe; }).join(', ') + '</p>';
+      result.mismatches.map(function(m) { return esc(m.feature) + '[' + m.index + '] ' + esc(m.original) + '→' + esc(m.probe); }).join(', ') + '</p>';
   }
   box.innerHTML = html;
   slot.appendChild(box);
