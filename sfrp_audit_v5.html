@@ -24,67 +24,71 @@
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
   :root {
-    --bg:          #ffffff;
-    --bg-subtle:   #f5f5f0;
-    --bg-muted:    #eae8e1;
-    --text:        #1a1a18;
-    --text-dim:    #5f5e5a;
-    --text-faint:  #888780;
-    --border:      #d3d1c7;
+    --bg:          #F0F0F0;
+    --bg-subtle:   #FFFFFF;
+    --bg-muted:    #E5E5E5;
+    --text:        #3C3C3C;
+    --text-dim:    #777777;
+    --text-faint:  #AFAFAF;
+    --border:      #E0E0E0;
 
-    --green:        #0F6E56;
-    --green-bg:     #E1F5EE;
-    --green-border: #5DCAA5;
+    --green:        #58CC02;
+    --green-bg:     #EDFCE0;
+    --green-border: #58CC02;
+    --green-shadow: #46A302;
 
-    --red:          #791F1F;
-    --red-bg:       #FCEBEB;
-    --red-border:   #F09595;
+    --red:          #FF4B4B;
+    --red-bg:       #FFF0F0;
+    --red-border:   #FF4B4B;
+    --red-shadow:   #E53535;
 
-    --amber:        #854F0B;
-    --amber-bg:     #FAEEDA;
-    --amber-border: #FAC775;
+    --amber:        #CE8400;
+    --amber-bg:     #FFF5DC;
+    --amber-border: #CE8400;
 
-    --blue:         #185FA5;
-    --blue-bg:      #E6F1FB;
+    --blue:         #1CB0F6;
+    --blue-bg:      #E8F7FF;
 
-    --purple:       #534AB7;
-    --purple-bg:    #EEEDFE;
+    --purple:       #A560E8;
+    --purple-bg:    #F5EDFF;
   }
 
   @media (prefers-color-scheme: dark) {
     :root {
-      --bg:          #1a1a18;
-      --bg-subtle:   #2c2c2a;
-      --bg-muted:    #3d3d3a;
-      --text:        #e8e6dd;
-      --text-dim:    #b4b2a9;
-      --text-faint:  #888780;
-      --border:      #5f5e5a;
+      --bg:          #131F24;
+      --bg-subtle:   #1F2D33;
+      --bg-muted:    #2B3940;
+      --text:        #F0F0F0;
+      --text-dim:    #B0B0B0;
+      --text-faint:  #707070;
+      --border:      #3A4A52;
 
-      --green:        #5DCAA5;
-      --green-bg:     #0a2e23;
-      --green-border: #0F6E56;
+      --green:        #58CC02;
+      --green-bg:     #1A3A12;
+      --green-border: #58CC02;
+      --green-shadow: #3A8A00;
 
-      --red:          #F09595;
-      --red-bg:       #3a1515;
-      --red-border:   #791F1F;
+      --red:          #FF4B4B;
+      --red-bg:       #3A1818;
+      --red-border:   #FF4B4B;
+      --red-shadow:   #CC2020;
 
-      --amber:        #FAC775;
-      --amber-bg:     #33280a;
-      --amber-border: #854F0B;
+      --amber:        #FFC800;
+      --amber-bg:     #332A0A;
+      --amber-border: #FFC800;
 
-      --blue:         #85B7EB;
-      --blue-bg:      #0c2640;
+      --blue:         #1CB0F6;
+      --blue-bg:      #0A2A3A;
 
-      --purple:       #AFA9EC;
-      --purple-bg:    #1f1d3a;
+      --purple:       #C090F0;
+      --purple-bg:    #201530;
     }
   }
 
   html { overflow-x: hidden; }
   body {
-    font-family: system-ui, -apple-system, sans-serif;
-    background: #0a0a14;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    background: #131F24;
     color: var(--text);
     max-width: 540px;
     margin: 0 auto;
@@ -378,122 +382,174 @@
   }
 
   /* ── Progress bar ── */
-  .progress-bar { display: flex; align-items: center; gap: 10px; margin-bottom: 2px; }
-  .progress-track { flex: 1; height: 5px; background: var(--bg-muted); border-radius: 3px; overflow: hidden; }
-  .progress-fill { height: 100%; background: var(--blue); border-radius: 3px; transition: width 0.25s ease; }
-  .progress-text { font-size: 13px; color: var(--text-dim); min-width: 70px; text-align: right; }
+  .progress-bar { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+  .progress-track { flex: 1; height: 10px; background: var(--bg-muted); border-radius: 8px; overflow: hidden; }
+  .progress-fill { height: 100%; background: var(--green); border-radius: 8px; transition: width 0.35s cubic-bezier(0.34, 1.56, 0.64, 1); }
+  .progress-text { font-size: 14px; font-weight: 700; color: var(--text-dim); min-width: 70px; text-align: right; font-variant-numeric: tabular-nums; }
   .progress-overall {
-    display: flex; align-items: center; gap: 8px; margin-bottom: 10px;
-    padding: 0 38px; /* align under the track (past the ← button) */
+    display: flex; align-items: center; gap: 8px; margin-bottom: 12px;
+    padding: 0 38px;
   }
-  .progress-overall-track { flex: 1; height: 2px; background: var(--bg-muted); border-radius: 1px; overflow: hidden; }
-  .progress-overall-fill { height: 100%; background: var(--text-dim); border-radius: 1px; transition: width 0.5s ease; opacity: 0.5; }
-  .progress-overall-text { font-size: 11px; color: var(--text-dim); opacity: 0.7; white-space: nowrap; }
+  .progress-overall-track { flex: 1; height: 3px; background: var(--bg-muted); border-radius: 2px; overflow: hidden; }
+  .progress-overall-fill { height: 100%; background: var(--text-faint); border-radius: 2px; transition: width 0.5s ease; }
+  .progress-overall-text { font-size: 12px; color: var(--text-dim); opacity: 0.7; white-space: nowrap; font-variant-numeric: tabular-nums; }
 
   /* ── Feature badge ── */
   .feature-badge {
-    display: inline-block; padding: 3px 10px; border-radius: 20px;
-    font-size: 11px; font-weight: 600; text-transform: uppercase;
-    letter-spacing: 0.5px; margin-bottom: 10px;
+    display: inline-block; padding: 5px 16px; border-radius: 20px;
+    font-size: 12px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 1px; margin-bottom: 10px;
   }
 
   /* ── Sentence card ── */
   .sentence-card {
-    padding: 20px 16px; border-radius: 12px;
-    border: 1px solid var(--border); background: var(--bg-subtle);
-    margin-bottom: 12px; min-height: 70px;
+    padding: 28px 22px; border-radius: 16px;
+    border: 2px solid var(--border); background: var(--bg-subtle);
+    margin-bottom: 16px; min-height: 90px;
     display: flex; align-items: center;
-    transition: transform 0.12s ease;
+    box-shadow: 0 2px 0 var(--border);
+    transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
   }
-  .sentence-card p { font-size: 16px; line-height: 1.65; }
+  .sentence-card p { font-size: 18px; line-height: 1.7; color: var(--text); }
+
+  /* Card entrance animation */
+  .card-enter { animation: cardEnter 0.2s ease-out; }
+  @keyframes cardEnter {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  /* Verdict flash on card */
+  .sentence-card.flash-correct { border-color: var(--green); background: var(--green-bg); box-shadow: 0 2px 0 var(--green-shadow); }
+  .sentence-card.flash-wrong   { border-color: var(--red);   background: var(--red-bg);   box-shadow: 0 2px 0 var(--red-shadow); }
+  .sentence-card.flash-unsure  { border-color: var(--amber); background: var(--amber-bg); box-shadow: 0 2px 0 var(--amber-border); }
 
   /* ── Label row ── */
-  .label-row { text-align: center; margin-bottom: 8px; }
-  .label-row .label-text { font-size: 13px; color: var(--text-dim); }
+  .label-row { text-align: center; margin-bottom: 6px; }
+  .label-row .label-text { font-size: 13px; color: var(--text-faint); font-weight: 500; }
   .label-row .label-value {
-    font-size: 15px; font-weight: 600; padding: 2px 10px;
-    background: var(--bg-muted); border-radius: 6px; margin: 0 4px;
+    font-size: 17px; font-weight: 800; padding: 4px 16px;
+    background: var(--bg-muted); border-radius: 10px; margin: 0 6px;
+    letter-spacing: 0.3px; display: inline-block;
   }
 
   .label-definition {
-    text-align: center; margin-bottom: 14px; padding: 8px 12px;
-    font-size: 12px; line-height: 1.4; color: var(--text-dim);
-    background: var(--bg-muted); border-radius: 8px; font-style: italic;
+    text-align: center; margin-bottom: 18px; padding: 6px 12px;
+    font-size: 13px; line-height: 1.5; color: var(--text-faint);
+    font-style: italic;
   }
 
   /* ── Response buttons ── */
-  .response-row { display: flex; gap: 10px; }
+  .response-row { display: flex; gap: 12px; margin-bottom: 10px; }
   .response-btn {
-    flex: 1; padding: 16px 0; font-size: 16px; font-weight: 600;
-    border-radius: 12px; cursor: pointer; transition: transform 0.1s; border: 2px solid;
+    flex: 1; padding: 16px 0; font-size: 17px; font-weight: 700;
+    border-radius: 16px; cursor: pointer;
+    border: none; border-bottom: 4px solid;
+    transition: filter 0.1s;
+    letter-spacing: 0.5px; text-transform: uppercase;
+    position: relative;
   }
-  .response-btn:active { transform: scale(0.97); }
-  .response-correct { background: var(--green-bg); color: var(--green); border-color: var(--green-border); }
-  .response-unsure  { background: var(--amber-bg); color: var(--amber); border-color: var(--amber-border); flex: 0.6; font-size: 13px; }
-  .response-wrong   { background: var(--red-bg);   color: var(--red);   border-color: var(--red-border); }
+  .response-btn:active {
+    border-bottom-width: 0;
+    transform: translateY(4px);
+  }
+  .response-correct {
+    background: var(--green); color: #FFFFFF;
+    border-bottom-color: var(--green-shadow);
+  }
+  .response-correct:active { background: var(--green-shadow); }
+  .response-wrong {
+    background: var(--red); color: #FFFFFF;
+    border-bottom-color: var(--red-shadow);
+  }
+  .response-wrong:active { background: var(--red-shadow); }
+
+  /* Not sure: secondary, outlined, own row */
+  .response-secondary { display: flex; gap: 10px; align-items: center; justify-content: center; margin-bottom: 4px; }
+  .response-unsure {
+    padding: 12px 28px; font-size: 14px; font-weight: 700;
+    border-radius: 12px; cursor: pointer;
+    border: 2px solid var(--border); border-bottom: 4px solid var(--border);
+    background: var(--bg-subtle); color: var(--text-dim);
+    text-transform: uppercase; letter-spacing: 0.3px;
+    transition: filter 0.1s;
+  }
+  .response-unsure:active {
+    border-bottom-width: 2px;
+    transform: translateY(2px);
+  }
+  .response-unsure:hover { border-color: var(--amber); color: var(--amber); }
 
   /* ── Correction flow ── */
   .correction-prompt {
-    text-align: center; font-size: 13px; color: var(--red);
-    font-weight: 500; margin-bottom: 8px;
+    text-align: center; font-size: 15px; color: var(--red);
+    font-weight: 700; margin-bottom: 10px;
   }
   .correction-row {
     display: flex; flex-wrap: wrap; gap: 8px; justify-content: center;
   }
   .correction-chip {
-    padding: 10px 16px; font-size: 14px; font-weight: 500;
-    border-radius: 10px; cursor: pointer; border: 1.5px solid var(--border);
+    padding: 12px 18px; font-size: 15px; font-weight: 600;
+    border-radius: 12px; cursor: pointer;
+    border: 2px solid var(--border); border-bottom: 4px solid var(--border);
     background: var(--bg-subtle); color: var(--text); transition: transform 0.1s;
   }
-  .correction-chip:active { transform: scale(0.97); }
+  .correction-chip:active { border-bottom-width: 2px; transform: translateY(2px); }
   .correction-chip:hover { border-color: var(--blue); background: var(--blue-bg); }
   .correction-skip {
     padding: 12px 20px; font-size: 13px;
     border: none; background: none; color: var(--text-faint);
     cursor: pointer; text-decoration: underline; margin-top: 4px;
-    min-height: 44px; /* iOS minimum touch target */
-  }
-
-  /* ── Reason flow (v5) ── */
-  .reason-prompt {
-    text-align: center; font-size: 12px; color: var(--text-dim);
-    font-weight: 500; margin-bottom: 6px; margin-top: 2px;
-  }
-  .reason-row {
-    display: flex; flex-wrap: wrap; gap: 6px; justify-content: center;
-    margin-bottom: 6px;
-  }
-  .reason-chip {
-    padding: 7px 12px; font-size: 12px; font-weight: 500;
-    border-radius: 20px; cursor: pointer; border: 1.5px solid var(--border);
-    background: var(--bg-subtle); color: var(--text-dim); transition: transform 0.1s;
-  }
-  .reason-chip:active { transform: scale(0.97); }
-  .reason-chip.selected { border-color: var(--blue); background: var(--blue-bg); color: var(--blue); }
-  .reason-comment {
-    width: 100%; padding: 8px 10px; font-size: 12px;
-    border: 1px solid var(--border); border-radius: 8px;
-    background: var(--bg-subtle); color: var(--text);
-    margin-bottom: 6px;
-  }
-  .reason-comment:focus { outline: 2px solid var(--blue); outline-offset: -1px; }
-  .reason-comment::placeholder { color: var(--text-faint); }
-  .reason-done-btn {
-    width: 100%; padding: 12px; font-size: 14px; font-weight: 500;
-    border-radius: 10px; border: none; cursor: pointer;
-    background: var(--blue); color: #fff;
-  }
-
-  /* ── Undo / hints / timer ── */
-  .undo-row { text-align: center; margin-top: 10px; }
-  .undo-btn {
-    font-size: 13px; padding: 6px 16px; border: none; background: none;
-    color: var(--text-faint); cursor: pointer; text-decoration: underline;
     min-height: 44px;
   }
-  .undo-btn:disabled { opacity: 0.3; cursor: default; }
 
-  .keyboard-hints { text-align: center; font-size: 11px; color: var(--text-faint); margin-top: 6px; }
+  /* ── Reason flow ── */
+  .reason-prompt {
+    text-align: center; font-size: 13px; color: var(--text-dim);
+    font-weight: 600; margin-bottom: 8px; margin-top: 4px;
+  }
+  .reason-row {
+    display: flex; flex-wrap: wrap; gap: 8px; justify-content: center;
+    margin-bottom: 8px;
+  }
+  .reason-chip {
+    padding: 8px 14px; font-size: 13px; font-weight: 600;
+    border-radius: 20px; cursor: pointer; border: 2px solid var(--border);
+    background: var(--bg-subtle); color: var(--text-dim); transition: all 0.1s;
+  }
+  .reason-chip:active { transform: scale(0.96); }
+  .reason-chip.selected { border-color: var(--blue); background: var(--blue-bg); color: var(--blue); }
+  .reason-comment {
+    width: 100%; padding: 10px 12px; font-size: 14px;
+    border: 2px solid var(--border); border-radius: 12px;
+    background: var(--bg-subtle); color: var(--text);
+    margin-bottom: 8px;
+  }
+  .reason-comment:focus { outline: none; border-color: var(--blue); }
+  .reason-comment::placeholder { color: var(--text-faint); }
+  .reason-done-btn {
+    width: 100%; padding: 14px; font-size: 15px; font-weight: 700;
+    border-radius: 12px; border: none; border-bottom: 4px solid #1490D0; cursor: pointer;
+    background: var(--blue); color: #fff; text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .reason-done-btn:active { border-bottom-width: 0; transform: translateY(4px); background: #1490D0; }
+
+  /* ── Undo / hints / timer ── */
+  .undo-row { text-align: center; margin-top: 2px; }
+  .undo-btn {
+    font-size: 12px; padding: 6px 16px; border: none; background: none;
+    color: var(--text-faint); cursor: pointer; opacity: 0.5;
+    min-height: 44px; transition: opacity 0.2s;
+  }
+  .undo-btn:hover { opacity: 1; text-decoration: underline; }
+  .undo-btn:disabled { opacity: 0.15; cursor: default; }
+
+  .keyboard-hints {
+    text-align: center; font-size: 10px; color: var(--text-faint);
+    margin-top: 4px; opacity: 0; transition: opacity 0.5s ease;
+    pointer-events: none;
+  }
+  .keyboard-hints.visible { opacity: 0.5; }
   .timer-display  { text-align: center; font-size: 11px; color: var(--text-faint); margin-top: 4px; }
 
   /* ── Stats table ── */
@@ -581,16 +637,16 @@
   /* ── Chunk break / gamification ── */
   .chunk-overlay {
     position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-    background: rgba(0,0,0,0.75); z-index: 100;
+    background: rgba(0,0,0,0.7); z-index: 100;
     display: flex; align-items: center; justify-content: center;
     animation: chunkFadeIn 0.3s ease;
   }
   @keyframes chunkFadeIn { from { opacity: 0; } to { opacity: 1; } }
 
   .chunk-card {
-    background: var(--bg); border-radius: 20px; padding: 32px 28px;
+    background: var(--bg-subtle); border-radius: 20px; padding: 36px 28px;
     max-width: 380px; width: 90%; text-align: center;
-    box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+    border: 2px solid var(--border); border-bottom: 4px solid var(--border);
     animation: chunkPop 0.4s cubic-bezier(0.16,1,0.3,1);
   }
   @keyframes chunkPop { from { transform: scale(0.85) translateY(20px); opacity: 0; } to { transform: scale(1) translateY(0); opacity: 1; } }
@@ -626,9 +682,15 @@
   }
 
   .streak-display {
-    font-size: 11px; color: var(--text-faint); text-align: center; margin-top: 2px;
+    text-align: center; min-height: 24px; margin-top: 6px;
   }
-  .streak-fire { color: var(--amber); font-weight: 600; }
+  .streak-fire {
+    display: inline-block; padding: 3px 12px; border-radius: 20px;
+    font-size: 12px; font-weight: 600;
+    color: var(--amber); background: var(--amber-bg); border: 1px solid var(--amber-border);
+    animation: streakPop 0.25s ease;
+  }
+  @keyframes streakPop { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 </style>
 </head>
 <body>
@@ -706,17 +768,18 @@
   <div class="feature-badge" id="feature-badge"></div>
   <div class="sentence-card" id="sentence-card"><p id="sentence-text"></p></div>
   <div class="label-row">
-    <span class="label-text">Algorithm says:</span>
+    <span class="label-text">Label:</span>
     <span class="label-value" id="auto-label"></span>
-    <span class="label-text">— is that right?</span>
   </div>
   <div class="label-definition" id="label-definition"></div>
 
   <div id="response-section">
     <div class="response-row">
-      <button class="response-btn response-correct" onclick="recordResponse('correct')">Correct</button>
-      <button class="response-btn response-unsure"  onclick="recordResponse('unsure')">Not sure</button>
-      <button class="response-btn response-wrong"   onclick="recordResponse('wrong')">Wrong</button>
+      <button class="response-btn response-correct" onclick="recordResponse('correct')">Correct ✓</button>
+      <button class="response-btn response-wrong"   onclick="recordResponse('wrong')">Wrong ✗</button>
+    </div>
+    <div class="response-secondary">
+      <button class="response-unsure" onclick="recordResponse('unsure')">Not sure</button>
     </div>
   </div>
 
@@ -943,6 +1006,10 @@ var totalSessionItems = 0;  // total items done this session (for messages)
   });
 
   document.addEventListener("keydown", function(e) {
+    // Show keyboard hints on first keyboard use
+    var hints = document.getElementById("keyboard-hints");
+    if (hints && !hints.classList.contains("visible")) hints.classList.add("visible");
+
     // Chunk break overlay: Enter/Space/Escape to dismiss
     var chunkOv = document.getElementById("chunk-overlay");
     if (chunkOv && chunkOv.style.display !== "none") {
@@ -980,7 +1047,9 @@ var totalSessionItems = 0;  // total items done this session (for messages)
     }
   });
 
-  if ("ontouchstart" in window) document.getElementById("keyboard-hints").style.display = "none";
+  // Flush any pending persist on page unload
+  window.addEventListener("beforeunload", function() { if (_persistDirty) _doPersist(); });
+
   checkForResumableSession();
 })();
 
@@ -1644,6 +1713,12 @@ function _renderCurrentItemInner() {
   badge.style.border = "1px solid " + color + "66";
 
   document.getElementById("sentence-text").textContent = item.sentence;
+
+  // Entrance animation for new card
+  var cardEl = document.getElementById("sentence-card");
+  cardEl.classList.remove("card-enter");
+  void cardEl.offsetWidth; // force reflow to restart animation
+  cardEl.classList.add("card-enter");
   document.getElementById("auto-label").textContent = item.auto_label;
   document.getElementById("label-definition").textContent =
     LABEL_DEFINITIONS[item.feature + "|" + item.auto_label] || "Is this label correct for this sentence?";
@@ -1689,8 +1764,8 @@ function recordResponse(verdict) {
   if (!isProbe) originalResponseCount++;
 
   var card = document.getElementById("sentence-card");
-  card.style.transform = verdict === "correct" ? "translateX(3px)" : verdict === "wrong" ? "translateX(-3px)" : "translateY(2px)";
-  setTimeout(function() { card.style.transform = "none"; }, 120);
+  card.classList.add("flash-" + verdict);
+  setTimeout(function() { card.classList.remove("flash-correct", "flash-wrong", "flash-unsure"); }, 180);
 
   if (verdict === "wrong") {
     pendingWrongKey = key;
@@ -2029,7 +2104,23 @@ function updateTimerDisplay() {
 function safeGetItem(key) { try { return localStorage.getItem(key); } catch (e) { return null; } }
 function safeSetItem(key, val) { try { localStorage.setItem(key, val); return true; } catch (e) { return false; } }
 
+var _persistTimer = null;
+var _persistDirty = false;
+
 function persistResponses() {
+  _persistDirty = true;
+  // Immediate persist if no recent persist, else debounce 1s
+  if (!_persistTimer) {
+    _doPersist();
+    _persistTimer = setTimeout(function() {
+      _persistTimer = null;
+      if (_persistDirty) _doPersist();
+    }, 1000);
+  }
+}
+
+function _doPersist() {
+  _persistDirty = false;
   var ms = sessionStartMs ? Date.now() - sessionStartMs : 0;
   var ok = safeSetItem(LS_KEY_RESPONSES, JSON.stringify({
     responses: responses, currentIndex: currentIndex,
