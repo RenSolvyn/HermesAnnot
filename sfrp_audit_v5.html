@@ -1,0 +1,2455 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>HERMES</title>
+<style>
+  /* ═══════════════════════════════════════════════════════════
+     SFRP Label Audit Tool — v5.0
+     Human validation of auto-generated linguistic labels.
+
+     Screens: load → review (+ correction + reason sub-states) → stats
+     Features:
+       - Consistency probes (blind re-test ~5% of items)
+       - Per-item response timing
+       - Wrong → correction flow (what should the label be?)
+       - Wrong/Unsure → reason flow (quick-tap chips + optional comment)
+       - Fatigue detection with break nudges
+       - Dataset fingerprint for provenance
+       - FNV-1a checksum on responses
+       - Self-documenting export schema
+     ═══════════════════════════════════════════════════════════ */
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:          #ffffff;
+    --bg-subtle:   #f5f5f0;
+    --bg-muted:    #eae8e1;
+    --text:        #1a1a18;
+    --text-dim:    #5f5e5a;
+    --text-faint:  #888780;
+    --border:      #d3d1c7;
+
+    --green:        #0F6E56;
+    --green-bg:     #E1F5EE;
+    --green-border: #5DCAA5;
+
+    --red:          #791F1F;
+    --red-bg:       #FCEBEB;
+    --red-border:   #F09595;
+
+    --amber:        #854F0B;
+    --amber-bg:     #FAEEDA;
+    --amber-border: #FAC775;
+
+    --blue:         #185FA5;
+    --blue-bg:      #E6F1FB;
+
+    --purple:       #534AB7;
+    --purple-bg:    #EEEDFE;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg:          #1a1a18;
+      --bg-subtle:   #2c2c2a;
+      --bg-muted:    #3d3d3a;
+      --text:        #e8e6dd;
+      --text-dim:    #b4b2a9;
+      --text-faint:  #888780;
+      --border:      #5f5e5a;
+
+      --green:        #5DCAA5;
+      --green-bg:     #0a2e23;
+      --green-border: #0F6E56;
+
+      --red:          #F09595;
+      --red-bg:       #3a1515;
+      --red-border:   #791F1F;
+
+      --amber:        #FAC775;
+      --amber-bg:     #33280a;
+      --amber-border: #854F0B;
+
+      --blue:         #85B7EB;
+      --blue-bg:      #0c2640;
+
+      --purple:       #AFA9EC;
+      --purple-bg:    #1f1d3a;
+    }
+  }
+
+  body {
+    font-family: system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    max-width: 540px;
+    margin: 0 auto;
+    padding: 16px;
+    padding: 16px env(safe-area-inset-right, 16px) 16px env(safe-area-inset-left, 16px);
+    padding-bottom: calc(env(safe-area-inset-bottom, 16px) + 40px);
+    -webkit-tap-highlight-color: transparent;
+    min-height: 100dvh;
+    -webkit-overflow-scrolling: touch;
+    overflow-x: hidden;
+  }
+
+  /* Load screen gets its own dark bg so it works even without canvas */
+  #screen-load {
+    background: linear-gradient(135deg, #0a0a14 0%, #0d1525 40%, #080818 100%);
+    color: #e8e6df;
+    min-height: 100dvh;
+  }
+  #screen-load .subtitle,
+  #screen-load .or-divider { color: #a8a6a0; }
+  #screen-load .or-divider::before,
+  #screen-load .or-divider::after { background: rgba(255,255,255,0.1); }
+  #screen-load .drop-zone-label { color: #a8a6a0; }
+  #screen-load .drop-zone-label b { color: #6cb4ee; }
+  #screen-load .drop-zone-icon { color: #6cb4ee; }
+  #screen-load .error-msg { background: #3a1515; border-color: #791F1F; color: #F09595; }
+  #screen-load .warn-msg { background: #33280a; border-color: #854F0B; color: #FAC775; }
+  #screen-load .info-box { background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.1); color: #a8a6a0; }
+  #screen-load .info-box .count { color: #e8e6df; }
+  #screen-load .btn-green { background: #0F6E56; }
+  #screen-load .btn-primary { background: #185FA5; }
+  #screen-load .btn-primary:disabled { opacity: 0.3; }
+  #screen-load textarea.paste-box {
+    background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.1); color: #e8e6df;
+  }
+  #screen-load textarea.paste-box::placeholder { color: #5f5e5a; }
+  #screen-load textarea.paste-box:focus { outline-color: #6cb4ee; }
+  #screen-load .drop-zone { border-color: rgba(108,180,238,0.25); background: transparent; }
+  #screen-load .drop-zone:hover,
+  #screen-load .drop-zone.dragover { border-color: #6cb4ee; background: rgba(108,180,238,0.08); }
+
+  @media (prefers-color-scheme: light) {
+    #screen-load {
+      background: linear-gradient(135deg, #eef2f7 0%, #dce6f2 40%, #f0f3f8 100%);
+      color: #1a1a18;
+    }
+    #screen-load .subtitle,
+    #screen-load .or-divider { color: var(--text-dim); }
+    #screen-load .or-divider::before,
+    #screen-load .or-divider::after { background: var(--border); }
+    #screen-load .drop-zone-label { color: var(--text-dim); }
+    #screen-load .drop-zone-label b { color: var(--blue); }
+    #screen-load .drop-zone-icon { color: var(--text-faint); }
+    #screen-load .error-msg { background: var(--red-bg); border-color: var(--red-border); color: var(--red); }
+    #screen-load .warn-msg { background: var(--amber-bg); border-color: var(--amber-border); color: var(--amber); }
+    #screen-load .info-box { background: rgba(255,255,255,0.55); border-color: rgba(0,0,0,0.06); color: var(--text-dim); }
+    #screen-load .info-box .count { color: var(--text); }
+    #screen-load .btn-primary { background: var(--blue); }
+    #screen-load textarea.paste-box {
+      background: rgba(255,255,255,0.7); border-color: rgba(0,0,0,0.08); color: var(--text);
+    }
+    #screen-load textarea.paste-box::placeholder { color: var(--text-faint); }
+    #screen-load .drop-zone { border-color: rgba(43,87,151,0.25); background: transparent; }
+    #screen-load .drop-zone:hover,
+    #screen-load .drop-zone.dragover { border-color: var(--blue); background: var(--blue-bg); }
+    #screen-load #hero-title { color: #1a1a18 !important; }
+    #screen-load #hero-sub { color: #5f5e5a !important; }
+    #screen-load #hero-sub2 { color: #5f5e5a !important; }
+  }
+
+  /* Mobile: prevent double-tap zoom delay on buttons */
+  button, .drop-zone, .correction-chip, .reason-chip, .response-btn {
+    touch-action: manipulation;
+  }
+
+  /* Wider container on desktop for breathing room */
+  @media (min-width: 768px) {
+    body { max-width: 600px; padding: 32px 24px; }
+    .sentence-card p { font-size: 17px; }
+    .response-btn { padding: 18px 0; }
+  }
+
+  /* Tighter spacing on very small screens */
+  @media (max-width: 359px) {
+    body { padding: 12px; }
+    .response-row { gap: 6px; }
+    .response-btn { font-size: 14px; padding: 14px 0; }
+    .response-unsure { font-size: 11px; }
+    .correction-chip { padding: 8px 12px; font-size: 13px; }
+    .sentence-card { padding: 14px 12px; }
+    .sentence-card p { font-size: 15px; }
+  }
+
+  h1 { font-size: 20px; font-weight: 600; margin-bottom: 4px; }
+  h2 { font-size: 17px; font-weight: 600; margin-bottom: 4px; }
+
+  .subtitle {
+    font-size: 13px;
+    color: var(--text-dim);
+    line-height: 1.5;
+    margin-bottom: 16px;
+  }
+
+  .screen { display: none; }
+  .screen.active { display: block; }
+
+  /* ── Glass cards (load screen) ── */
+  .glass-card {
+    background: rgba(255,255,255,0.06);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 14px;
+    padding: 16px;
+    margin-bottom: 0;
+    transition: border-color 0.3s;
+  }
+  .glass-card:hover { border-color: rgba(108,180,238,0.2); }
+
+  @media (prefers-color-scheme: light) {
+    .glass-card {
+      background: rgba(255,255,255,0.55);
+      border-color: rgba(0,0,0,0.06);
+    }
+    .glass-card:hover { border-color: rgba(43,87,151,0.2); }
+  }
+
+  .glass-label {
+    font-size: 11px; font-weight: 500; letter-spacing: 1px;
+    text-transform: uppercase; color: #888780;
+    display: block; margin-bottom: 6px;
+  }
+
+  .glass-input {
+    width: 100%; padding: 11px 14px; font-size: 15px;
+    border: 1px solid rgba(255,255,255,0.1); border-radius: 10px;
+    background: rgba(255,255,255,0.04); color: #e8e6df;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  .glass-input:focus {
+    outline: none;
+    border-color: rgba(108,180,238,0.5);
+    box-shadow: 0 0 0 3px rgba(108,180,238,0.1);
+  }
+  .glass-input::placeholder { color: #5f5e5a; }
+
+  @media (prefers-color-scheme: light) {
+    .glass-label { color: var(--text-faint); }
+    .glass-input {
+      background: rgba(255,255,255,0.7);
+      border-color: rgba(0,0,0,0.08);
+      color: var(--text);
+    }
+    .glass-input::placeholder { color: var(--text-faint); }
+    .glass-input:focus {
+      border-color: rgba(43,87,151,0.4);
+      box-shadow: 0 0 0 3px rgba(43,87,151,0.08);
+    }
+  }
+
+  /* ── Drop zone ── */
+  .drop-zone {
+    border: 2px dashed var(--border);
+    border-radius: 12px;
+    padding: 32px 16px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+    margin-bottom: 12px;
+  }
+  .drop-zone:hover,
+  .drop-zone.dragover {
+    border-color: var(--blue);
+    background: var(--blue-bg);
+  }
+  .drop-zone input { display: none; }
+  .drop-zone-icon { font-size: 28px; margin-bottom: 8px; display: block; color: var(--text-faint); }
+  .drop-zone-label { font-size: 14px; color: var(--text-dim); }
+  .drop-zone-label b { color: var(--blue); }
+
+  .or-divider {
+    text-align: center; font-size: 12px; color: var(--text-faint);
+    margin: 8px 0; position: relative;
+  }
+  .or-divider::before, .or-divider::after {
+    content: ""; position: absolute; top: 50%;
+    width: calc(50% - 20px); height: 1px; background: var(--border);
+  }
+  .or-divider::before { left: 0; }
+  .or-divider::after { right: 0; }
+
+  textarea.paste-box {
+    width: 100%; min-height: 90px; padding: 10px; font-size: 12px;
+    font-family: "SF Mono", "Fira Code", "Consolas", monospace;
+    border: 1px solid var(--border); border-radius: 8px;
+    background: var(--bg-subtle); color: var(--text); resize: vertical;
+  }
+  textarea.paste-box:focus { outline: 2px solid var(--blue); outline-offset: -1px; }
+
+  /* ── Buttons ── */
+  .btn-primary {
+    width: 100%; padding: 14px; font-size: 16px;
+    background: var(--blue); color: #fff; margin-top: 10px;
+    border: none; border-radius: 10px; cursor: pointer; font-weight: 500;
+  }
+  .btn-primary:disabled { opacity: 0.4; cursor: default; }
+
+  .btn-green {
+    width: 100%; padding: 14px; font-size: 16px;
+    background: var(--green); color: #fff; margin-top: 10px;
+    border: none; border-radius: 10px; cursor: pointer; font-weight: 500;
+  }
+
+  .btn-secondary {
+    width: 100%; padding: 12px; font-size: 14px; border-radius: 10px;
+    border: 1px solid var(--border); background: none;
+    color: var(--text-dim); cursor: pointer; margin-top: 8px;
+  }
+
+  .btn-reset {
+    width: 100%; padding: 10px; font-size: 13px;
+    border: none; background: none; color: var(--text-faint);
+    cursor: pointer; text-decoration: underline; margin-top: 8px;
+  }
+
+  .btn-small {
+    font-size: 12px; padding: 6px 12px; min-height: 36px;
+    border: 1px solid var(--border); border-radius: 6px;
+    background: none; color: var(--text-dim); cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+
+  /* ── Info / error / warning ── */
+  .info-box {
+    margin-top: 12px; padding: 12px; border-radius: 8px;
+    background: var(--bg-subtle); font-size: 13px;
+    color: var(--text-dim); border: 1px solid var(--border);
+  }
+  .info-box .count { font-weight: 600; color: var(--text); }
+
+  .error-msg {
+    margin-top: 8px; padding: 10px; border-radius: 8px;
+    background: var(--red-bg); border: 1px solid var(--red-border);
+    font-size: 13px; color: var(--red);
+  }
+
+  .warn-msg {
+    margin-top: 8px; padding: 10px; border-radius: 8px;
+    background: var(--amber-bg); border: 1px solid var(--amber-border);
+    font-size: 13px; color: var(--amber);
+  }
+
+  /* ── Fatigue nudge ── */
+  .fatigue-nudge {
+    padding: 10px 12px; border-radius: 8px; margin-bottom: 10px;
+    background: var(--blue-bg); border: 1px solid var(--blue);
+    font-size: 12px; color: var(--blue); line-height: 1.4;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .fatigue-nudge button {
+    background: none; border: none; color: var(--blue);
+    cursor: pointer; font-size: 16px; padding: 0 0 0 8px; flex-shrink: 0;
+  }
+
+  /* ── Progress bar ── */
+  .progress-bar { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .progress-track { flex: 1; height: 5px; background: var(--bg-muted); border-radius: 3px; overflow: hidden; }
+  .progress-fill { height: 100%; background: var(--blue); border-radius: 3px; transition: width 0.25s ease; }
+  .progress-text { font-size: 13px; color: var(--text-dim); min-width: 70px; text-align: right; }
+
+  /* ── Feature badge ── */
+  .feature-badge {
+    display: inline-block; padding: 3px 10px; border-radius: 20px;
+    font-size: 11px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.5px; margin-bottom: 10px;
+  }
+
+  /* ── Sentence card ── */
+  .sentence-card {
+    padding: 20px 16px; border-radius: 12px;
+    border: 1px solid var(--border); background: var(--bg-subtle);
+    margin-bottom: 12px; min-height: 70px;
+    display: flex; align-items: center;
+    transition: transform 0.12s ease;
+  }
+  .sentence-card p { font-size: 16px; line-height: 1.65; }
+
+  /* ── Label row ── */
+  .label-row { text-align: center; margin-bottom: 8px; }
+  .label-row .label-text { font-size: 13px; color: var(--text-dim); }
+  .label-row .label-value {
+    font-size: 15px; font-weight: 600; padding: 2px 10px;
+    background: var(--bg-muted); border-radius: 6px; margin: 0 4px;
+  }
+
+  .label-definition {
+    text-align: center; margin-bottom: 14px; padding: 8px 12px;
+    font-size: 12px; line-height: 1.4; color: var(--text-dim);
+    background: var(--bg-muted); border-radius: 8px; font-style: italic;
+  }
+
+  /* ── Response buttons ── */
+  .response-row { display: flex; gap: 10px; }
+  .response-btn {
+    flex: 1; padding: 16px 0; font-size: 16px; font-weight: 600;
+    border-radius: 12px; cursor: pointer; transition: transform 0.1s; border: 2px solid;
+  }
+  .response-btn:active { transform: scale(0.97); }
+  .response-correct { background: var(--green-bg); color: var(--green); border-color: var(--green-border); }
+  .response-unsure  { background: var(--amber-bg); color: var(--amber); border-color: var(--amber-border); flex: 0.6; font-size: 13px; }
+  .response-wrong   { background: var(--red-bg);   color: var(--red);   border-color: var(--red-border); }
+
+  /* ── Correction flow ── */
+  .correction-prompt {
+    text-align: center; font-size: 13px; color: var(--red);
+    font-weight: 500; margin-bottom: 8px;
+  }
+  .correction-row {
+    display: flex; flex-wrap: wrap; gap: 8px; justify-content: center;
+  }
+  .correction-chip {
+    padding: 10px 16px; font-size: 14px; font-weight: 500;
+    border-radius: 10px; cursor: pointer; border: 1.5px solid var(--border);
+    background: var(--bg-subtle); color: var(--text); transition: transform 0.1s;
+  }
+  .correction-chip:active { transform: scale(0.97); }
+  .correction-chip:hover { border-color: var(--blue); background: var(--blue-bg); }
+  .correction-skip {
+    padding: 12px 20px; font-size: 13px;
+    border: none; background: none; color: var(--text-faint);
+    cursor: pointer; text-decoration: underline; margin-top: 4px;
+    min-height: 44px; /* iOS minimum touch target */
+  }
+
+  /* ── Reason flow (v5) ── */
+  .reason-prompt {
+    text-align: center; font-size: 12px; color: var(--text-dim);
+    font-weight: 500; margin-bottom: 6px; margin-top: 2px;
+  }
+  .reason-row {
+    display: flex; flex-wrap: wrap; gap: 6px; justify-content: center;
+    margin-bottom: 6px;
+  }
+  .reason-chip {
+    padding: 7px 12px; font-size: 12px; font-weight: 500;
+    border-radius: 20px; cursor: pointer; border: 1.5px solid var(--border);
+    background: var(--bg-subtle); color: var(--text-dim); transition: transform 0.1s;
+  }
+  .reason-chip:active { transform: scale(0.97); }
+  .reason-chip.selected { border-color: var(--blue); background: var(--blue-bg); color: var(--blue); }
+  .reason-comment {
+    width: 100%; padding: 8px 10px; font-size: 12px;
+    border: 1px solid var(--border); border-radius: 8px;
+    background: var(--bg-subtle); color: var(--text);
+    margin-bottom: 6px;
+  }
+  .reason-comment:focus { outline: 2px solid var(--blue); outline-offset: -1px; }
+  .reason-comment::placeholder { color: var(--text-faint); }
+  .reason-done-btn {
+    width: 100%; padding: 12px; font-size: 14px; font-weight: 500;
+    border-radius: 10px; border: none; cursor: pointer;
+    background: var(--blue); color: #fff;
+  }
+
+  /* ── Undo / hints / timer ── */
+  .undo-row { text-align: center; margin-top: 10px; }
+  .undo-btn {
+    font-size: 13px; padding: 6px 16px; border: none; background: none;
+    color: var(--text-faint); cursor: pointer; text-decoration: underline;
+    min-height: 44px;
+  }
+  .undo-btn:disabled { opacity: 0.3; cursor: default; }
+
+  .keyboard-hints { text-align: center; font-size: 11px; color: var(--text-faint); margin-top: 6px; }
+  .timer-display  { text-align: center; font-size: 11px; color: var(--text-faint); margin-top: 4px; }
+
+  /* ── Stats table ── */
+  .stats-table-wrapper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    margin-bottom: 16px;
+  }
+  .stats-table {
+    width: 100%; border-collapse: collapse; border-radius: 10px;
+    overflow: hidden; border: 1px solid var(--border);
+    min-width: 340px;
+  }
+  .stats-table th {
+    font-size: 11px; font-weight: 500; color: var(--text-dim);
+    background: var(--bg-muted); padding: 8px 6px; text-align: left;
+  }
+  .stats-table th:not(:first-child) { text-align: center; }
+  .stats-table td { font-size: 13px; padding: 9px 6px; border-top: 1px solid var(--border); }
+  .stats-table td:not(:first-child) { text-align: center; }
+
+  .rate-good { color: var(--green); font-weight: 600; }
+  .rate-warn { color: var(--amber); font-weight: 600; }
+  .rate-bad  { color: var(--red);   font-weight: 600; }
+
+  .feature-dot {
+    display: inline-block; width: 8px; height: 8px;
+    border-radius: 50%; margin-right: 5px; vertical-align: middle;
+  }
+
+  .done-box {
+    margin-top: 16px; padding: 14px; border-radius: 10px;
+    background: var(--green-bg); border: 1px solid var(--green-border);
+    font-size: 13px; color: var(--green); line-height: 1.5;
+  }
+  .done-box code {
+    font-size: 11px; background: rgba(0,0,0,0.06);
+    padding: 2px 4px; border-radius: 3px;
+  }
+
+  .consistency-box {
+    margin-bottom: 16px; padding: 12px; border-radius: 10px;
+    border: 1px solid var(--border); background: var(--bg-subtle);
+  }
+  .consistency-box h3 { font-size: 13px; font-weight: 600; margin-bottom: 6px; }
+  .consistency-box p  { font-size: 12px; color: var(--text-dim); line-height: 1.5; }
+  .consistency-value  { font-size: 20px; font-weight: 700; margin: 4px 0; }
+
+  .integrity-bar {
+    margin-top: 12px; padding: 8px 12px; border-radius: 8px;
+    background: var(--purple-bg); border: 1px solid var(--purple);
+    font-size: 11px; color: var(--purple);
+    font-family: "SF Mono", "Fira Code", "Consolas", monospace;
+    line-height: 1.6;
+  }
+
+  /* ── Personal stats card (v5) ── */
+  .personal-card {
+    padding: 16px; border-radius: 12px; margin-bottom: 14px;
+    background: var(--purple-bg); border: 1px solid var(--purple);
+  }
+  .personal-card h3 { font-size: 14px; font-weight: 600; color: var(--purple); margin-bottom: 10px; }
+  .personal-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+  }
+  .personal-stat {
+    padding: 8px 10px; border-radius: 8px; background: var(--bg);
+    text-align: center;
+  }
+  .personal-stat .stat-value { font-size: 22px; font-weight: 700; color: var(--text); display: block; }
+  .personal-stat .stat-label { font-size: 11px; color: var(--text-dim); }
+  .personal-stat.full-width { grid-column: 1 / -1; }
+
+  .reason-summary {
+    padding: 12px; border-radius: 10px; margin-bottom: 14px;
+    border: 1px solid var(--border); background: var(--bg-subtle);
+  }
+  .reason-summary h3 { font-size: 13px; font-weight: 600; margin-bottom: 8px; }
+  .reason-bar-row { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+  .reason-bar-label { font-size: 11px; color: var(--text-dim); min-width: 120px; text-align: right; }
+  .reason-bar-track { flex: 1; height: 12px; background: var(--bg-muted); border-radius: 6px; overflow: hidden; }
+  .reason-bar-fill { height: 100%; background: var(--amber); border-radius: 6px; transition: width 0.3s; }
+  .reason-bar-count { font-size: 11px; color: var(--text-faint); min-width: 20px; }
+</style>
+</head>
+<body>
+
+<!-- ═══ SCREEN 1: Load ═══ -->
+<div id="screen-load" class="screen active" role="main" aria-label="Load dataset">
+  <canvas id="hero-canvas" style="position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;pointer-events:none"></canvas>
+  <div style="position:relative;z-index:1">
+
+  <div id="hero-section" style="text-align:center;padding:40px 0 24px 0">
+    <h1 id="hero-title" style="font-size:28px;font-weight:700;letter-spacing:3px;margin:0;opacity:0;transform:translateY(12px);transition:all 1.2s cubic-bezier(0.16,1,0.3,1);color:#e8e6df">HERMES</h1>
+    <p id="hero-sub" style="font-size:11px;letter-spacing:5px;text-transform:uppercase;margin-top:8px;opacity:0;transition:opacity 1.5s ease 0.6s;color:#888780">The gate must hold</p>
+    <p id="hero-sub2" style="font-size:12px;margin-top:14px;opacity:0;transition:opacity 1.5s ease 1.2s;max-width:360px;margin-left:auto;margin-right:auto;text-align:center;line-height:1.6;color:#a8a6a0">Validate auto-generated labels. Tap correct, wrong, or not sure. Progress saves in your browser.</p>
+  </div>
+
+  <div class="glass-card" style="margin-bottom:14px">
+    <label for="reviewer-name" class="glass-label">Your name</label>
+    <input type="text" id="reviewer-name" placeholder="e.g. Alice" maxlength="60" class="glass-input">
+  </div>
+
+  <div class="glass-card">
+    <div class="drop-zone" id="drop-zone" onclick="document.getElementById('file-input').click()" style="border-color:rgba(108,180,238,0.3)">
+      <span class="drop-zone-icon">&#128196;</span>
+      <span class="drop-zone-label">Tap to select <b>audit_set.json</b> or drag &amp; drop</span>
+      <input type="file" id="file-input" accept=".json">
+    </div>
+    <div class="or-divider">or paste JSON</div>
+    <textarea class="paste-box" id="json-paste" placeholder='{"items": [...]}' spellcheck="false"></textarea>
+    <button class="btn-primary" id="load-btn" onclick="loadFromPaste()" disabled>Load audit set</button>
+  </div>
+
+  <div id="load-error" class="error-msg" style="display:none"></div>
+  <div id="load-warn" class="warn-msg" style="display:none"></div>
+  <div id="load-info" class="info-box" style="display:none"></div>
+
+  <div id="resume-section" style="display:none;margin-top:16px">
+    <div class="glass-card" style="text-align:center">
+      <button class="btn-green" onclick="resumeSession()" style="margin-top:0">Resume previous session</button>
+      <p class="subtitle" style="margin-top:8px;margin-bottom:0" id="resume-info"></p>
+    </div>
+  </div>
+
+  <div style="margin-top:14px">
+    <div class="glass-card">
+      <div class="drop-zone" id="save-drop-zone" onclick="document.getElementById('save-file-input').click()" style="padding:16px;border-color:rgba(108,180,238,0.2)">
+        <span class="drop-zone-icon" style="font-size:20px">&#128190;</span>
+        <span class="drop-zone-label">Tap to restore from a <b>save file</b></span>
+        <input type="file" id="save-file-input" accept=".json">
+      </div>
+    </div>
+  </div>
+
+  <p style="text-align:center;font-size:10px;color:#5f5e5a;margin-top:20px;letter-spacing:0.5px">SFRP v11 &middot; Audit Tool v5.0 &middot; Single-file, zero dependencies, fully offline</p>
+
+  </div><!-- end z-index wrapper -->
+</div>
+
+<!-- ═══ SCREEN 2: Review ═══ -->
+<div id="screen-review" class="screen" role="main" aria-label="Review items">
+  <div id="fatigue-slot"></div>
+  <div class="progress-bar">
+    <button class="btn-small" onclick="goBackToLoad()" title="Change file">&larr;</button>
+    <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
+    <span class="progress-text" id="progress-text"></span>
+    <button class="btn-small" onclick="saveProgressToFile()">Save</button>
+    <button class="btn-small" onclick="showStats()">Stats</button>
+  </div>
+  <div class="feature-badge" id="feature-badge"></div>
+  <div class="sentence-card" id="sentence-card"><p id="sentence-text"></p></div>
+  <div class="label-row">
+    <span class="label-text">Algorithm says:</span>
+    <span class="label-value" id="auto-label"></span>
+    <span class="label-text">— is that right?</span>
+  </div>
+  <div class="label-definition" id="label-definition"></div>
+
+  <div id="response-section">
+    <div class="response-row">
+      <button class="response-btn response-correct" onclick="recordResponse('correct')">Correct</button>
+      <button class="response-btn response-unsure"  onclick="recordResponse('unsure')">Not sure</button>
+      <button class="response-btn response-wrong"   onclick="recordResponse('wrong')">Wrong</button>
+    </div>
+  </div>
+
+  <div id="correction-section" style="display:none">
+    <p class="correction-prompt">What should the label be?</p>
+    <div class="correction-row" id="correction-options"></div>
+    <div style="text-align:center">
+      <button class="correction-skip" onclick="submitCorrection(null)">Not sure / skip</button>
+    </div>
+  </div>
+
+  <div id="reason-section" style="display:none">
+    <p class="reason-prompt">Why? (optional — tap one or type)</p>
+    <div class="reason-row" id="reason-chips"></div>
+    <input class="reason-comment" id="reason-comment" type="text" placeholder="Other reason (optional)" maxlength="120">
+    <button class="reason-done-btn" onclick="submitReason()">Done</button>
+  </div>
+
+  <div class="undo-row"><button class="undo-btn" id="undo-btn" onclick="undoLastResponse()" disabled>Undo last</button></div>
+  <p class="keyboard-hints" id="keyboard-hints">← wrong · ↓ unsure · → correct · backspace undo · (on wrong: 1-9 label, esc skip) · (on reason: enter done)</p>
+  <div class="timer-display" id="timer-display"></div>
+</div>
+
+<!-- ═══ SCREEN 3: Stats ═══ -->
+<div id="screen-stats" class="screen" role="main" aria-label="Audit statistics">
+  <h2>Audit progress</h2>
+  <p class="subtitle" id="stats-subtitle"></p>
+  <div id="personal-stats-slot"></div>
+  <div id="consistency-slot"></div>
+  <div id="reason-summary-slot"></div>
+  <div class="stats-table-wrapper">
+    <table class="stats-table">
+      <thead><tr><th>Feature</th><th>n</th><th>✓</th><th>?</th><th>✗</th><th>Agree</th></tr></thead>
+      <tbody id="stats-body"></tbody>
+    </table>
+  </div>
+  <div id="stats-buttons"></div>
+  <div class="integrity-bar" id="integrity-bar"></div>
+</div>
+
+<script>
+/* ═══════════════════════════════════════════════════════════
+   SFRP Label Audit Tool — v5.0
+   ═══════════════════════════════════════════════════════════
+
+   State model:
+     dataset            — {items: [...]} the loaded audit set
+     responses          — {key → response object}
+                          originals: "feature_itemIndex"
+                          probes:    "probe_feature_itemIndex"
+     currentIndex       — position in shuffledOrder
+     shuffledOrder      — deterministic interleaved order incl. probes
+     probeSet           — Set of positions in shuffledOrder that are probes
+     originalItemCount  — count before probes
+     sessionStartMs     — Date.now() at review screen entry
+     priorTimeMs        — accumulated time from prior sessions
+     itemShownAtMs      — Date.now() when current item rendered
+     labelsPerFeature   — {feature → [label, ...]} for correction flow
+     datasetFingerprint — FNV-1a of input for provenance
+     awaitingCorrection — true during "what should it be?" sub-state
+     pendingWrongKey    — response key awaiting correction
+
+   Consistency probes:
+     ~5% of items (min 3, max 50, only for sets ≥ 50) are blind
+     re-insertions in the second half. Self-agreement is computed
+     on export by comparing probe vs original verdicts.
+   ═══════════════════════════════════════════════════════════ */
+
+var TOOL_VERSION = "5.0";
+var SFRP_VERSION = "v11";
+var LS_KEY_DATASET   = "sfrp_audit_dataset_v5";
+var LS_KEY_RESPONSES = "sfrp_audit_responses_v5";
+var MAX_ITEMS = 10000;
+
+var PROBE_RATE = 0.05;
+var PROBE_MIN  = 3;
+var PROBE_MAX  = 50;
+var PROBE_MIN_DATASET = 50;
+var PROBE_MIN_GAP = 30;  // minimum positions between original and its probe
+
+var FATIGUE_WINDOW         = 20;
+var FATIGUE_ERROR_RATE     = 0.40;
+var FATIGUE_RUSH_SECONDS   = 1.2;
+var FATIGUE_CHECK_EVERY    = 30;
+var FATIGUE_MIN_MINUTES    = 20;
+
+var FEATURE_COLORS = {
+  negation:      "#85B7EB",
+  tense:         "#AFA9EC",
+  number:        "#5DCAA5",
+  voice:         "#F0997B",
+  comparison:    "#ED93B1",
+  sentiment:     "#FAC775",
+  complexity:    "#97C459",
+  register:      "#9CA3AF",
+  topic:         "#E07B4C",
+  specificity:   "#D4A5E5",
+  agent_patient: "#7CC9D6",
+  cause_effect:  "#D6A07C"
+};
+
+var LABEL_DEFINITIONS = {
+  "voice|active":            "Main clause subject performs the action (e.g. 'The team reviewed…')",
+  "voice|passive":           "Main clause subject receives the action (e.g. 'The report was reviewed…')",
+  "tense|past":              "Main clause verb is past tense (e.g. 'analyzed', 'finished')",
+  "tense|present":           "Main clause verb is present tense (e.g. 'analyzes', 'runs')",
+  "tense|future":            "Main clause verb uses 'will' + base form (e.g. 'will analyze')",
+  "sentiment|positive":      "Overall sentence expresses approval, praise, or favorable evaluation",
+  "sentiment|negative":      "Overall sentence expresses disapproval, criticism, or unfavorable evaluation",
+  "sentiment|neutral":       "No clear positive or negative sentiment overall",
+  "complexity|simple":       "Single clause — no embedded 'although/because/who/which' clause",
+  "complexity|complex":      "Contains a dependent clause (e.g. 'although X, Y' or 'the person who…')",
+  "negation|negated":        "Main clause verb is negated by not/never/no/neither — ignore subordinate clauses",
+  "negation|affirmed":       "Main clause verb is NOT negated — even if subordinate clauses contain negation",
+  "number|singular":         "Main clause subject is singular (e.g. 'the company says…')",
+  "number|plural":           "Main clause subject is plural (e.g. 'the companies say…')",
+  "comparison|positive":     "Base adjective form (e.g. 'tall', 'important')",
+  "comparison|comparative":  "Comparative form (e.g. 'taller', 'more important')",
+  "comparison|superlative":  "Superlative form (e.g. 'tallest', 'most important')",
+  "register|formal":         "Academic, professional, or impersonal language",
+  "register|informal":       "Conversational, contractions, slang, or casual tone",
+  "specificity|specific":    "Contains names, numbers, dates, or precise details",
+  "specificity|general":     "Vague or abstract — no specific names, numbers, or dates",
+  "cause_effect|causal":     "Sentence describes a cause-and-effect relationship (e.g. 'X led to Y', 'because of X')",
+  "cause_effect|non_causal": "No cause-and-effect relationship expressed"
+};
+
+// ── State ──
+var dataset            = null;
+var responses          = {};
+var currentIndex       = 0;
+var shuffledOrder      = [];
+var probeSet           = new Set();
+var originalItemCount  = 0;
+var sessionStartMs     = null;
+var priorTimeMs        = 0;
+var itemShownAtMs      = null;
+var labelsPerFeature   = {};
+var datasetFingerprint = "";
+var saveDegraded       = false;
+var fatigueAcked       = false;
+var awaitingCorrection = false;
+var pendingWrongKey    = null;
+var hasGroundTruth     = false;
+var awaitingReason     = false;
+var pendingReasonKey   = null;
+var selectedReasons    = [];
+
+var REASON_CHIPS = [
+  "Subordinate clause",
+  "Wrong subject",
+  "Dialect ambiguous",
+  "Explanation wrong",
+  "Label debatable",
+  "Multiple features",
+  "Confounded context"
+];
+var originalResponseCount = 0; // cached — updated in record/undo, not recomputed
+var processingResponse = false; // debounce flag — prevents double-tap
+var reviewerName = "";
+
+
+// ═══════════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════════
+
+(function init() {
+  document.getElementById("file-input").addEventListener("change", function(e) {
+    var f = e.target.files[0]; if (!f) return;
+    var r = new FileReader();
+    r.onload = function(ev) { processInput(ev.target.result); };
+    r.onerror = function() { showError("Failed to read file"); };
+    r.readAsText(f);
+    e.target.value = "";  // allow re-selecting the same file
+  });
+
+  var dz = document.getElementById("drop-zone");
+  dz.addEventListener("dragover", function(e) { e.preventDefault(); dz.classList.add("dragover"); });
+  dz.addEventListener("dragleave", function() { dz.classList.remove("dragover"); });
+  dz.addEventListener("drop", function(e) {
+    e.preventDefault(); dz.classList.remove("dragover");
+    var f = e.dataTransfer.files[0]; if (!f) return;
+    var r = new FileReader();
+    r.onload = function(ev) { processInput(ev.target.result); };
+    r.readAsText(f);
+  });
+
+  document.getElementById("json-paste").addEventListener("input", function() {
+    document.getElementById("load-btn").disabled = this.value.trim().length < 20;
+  });
+
+  // Save file drop zone
+  document.getElementById("save-file-input").addEventListener("change", function(e) {
+    var f = e.target.files[0]; if (!f) return;
+    var r = new FileReader();
+    r.onload = function(ev) { loadProgressFromFile(ev.target.result); };
+    r.onerror = function() { showError("Failed to read save file"); };
+    r.readAsText(f);
+    e.target.value = "";
+  });
+  var sdz = document.getElementById("save-drop-zone");
+  sdz.addEventListener("dragover", function(e) { e.preventDefault(); sdz.classList.add("dragover"); });
+  sdz.addEventListener("dragleave", function() { sdz.classList.remove("dragover"); });
+  sdz.addEventListener("drop", function(e) {
+    e.preventDefault(); sdz.classList.remove("dragover");
+    var f = e.dataTransfer.files[0]; if (!f) return;
+    var r = new FileReader();
+    r.onload = function(ev) { loadProgressFromFile(ev.target.result); };
+    r.readAsText(f);
+  });
+
+  document.addEventListener("keydown", function(e) {
+    if (!document.getElementById("screen-review").classList.contains("active")) return;
+
+    // During correction flow: number keys select options, Escape skips
+    if (awaitingCorrection) {
+      if (e.key === "Escape" || e.key === "s") { submitCorrection(null); e.preventDefault(); return; }
+      var num = parseInt(e.key);
+      if (num >= 1) {
+        var chips = document.getElementById("correction-options").children;
+        if (num <= chips.length) { chips[num - 1].click(); e.preventDefault(); }
+      }
+      return;
+    }
+
+    // During reason flow: Enter submits, Escape skips
+    if (awaitingReason) {
+      if (e.key === "Enter") { submitReason(); e.preventDefault(); }
+      else if (e.key === "Escape") { submitReason(); e.preventDefault(); }
+      return;
+    }
+
+    switch (e.key) {
+      case "ArrowRight": case "j": recordResponse("correct"); e.preventDefault(); break;
+      case "ArrowLeft":  case "k": recordResponse("wrong");   e.preventDefault(); break;
+      case "ArrowDown":  case "s": recordResponse("unsure");  e.preventDefault(); break;
+      case "Backspace":  case "z": undoLastResponse();         e.preventDefault(); break;
+    }
+  });
+
+  if ("ontouchstart" in window) document.getElementById("keyboard-hints").style.display = "none";
+  checkForResumableSession();
+})();
+
+
+// ═══════════════════════════════════════════════════════════
+// HERO ANIMATION — Full-screen immersive background
+// ═══════════════════════════════════════════════════════════
+
+(function initHero() {
+  var canvas = document.getElementById("hero-canvas");
+  if (!canvas) return;
+  var ctx = canvas.getContext("2d");
+  var W, H, cx, cy, t = 0, animId;
+  var isDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+  var particles = [], gridNodes = [], connections = [];
+  var mouse = { x: -1000, y: -1000 };
+
+  function resize() {
+    var dpr = window.devicePixelRatio || 1;
+    W = window.innerWidth; H = window.innerHeight;
+    canvas.width = W * dpr; canvas.height = H * dpr;
+    ctx.scale(dpr, dpr);
+    cx = W / 2; cy = H / 2;
+    buildGrid();
+  }
+
+  // ── Grid mesh ──
+  function buildGrid() {
+    gridNodes = [];
+    var spacing = 60;
+    for (var x = spacing / 2; x < W + spacing; x += spacing) {
+      for (var y = spacing / 2; y < H + spacing; y += spacing) {
+        gridNodes.push({
+          ox: x, oy: y, x: x, y: y,
+          phase: Math.random() * Math.PI * 2,
+          amp: 1 + Math.random() * 2
+        });
+      }
+    }
+    // Precompute neighbor connections (horizontal and vertical)
+    connections = [];
+    var cols = Math.ceil((W + spacing) / spacing);
+    for (var i = 0; i < gridNodes.length; i++) {
+      var col = i % cols;
+      if (col < cols - 1 && i + 1 < gridNodes.length) connections.push([i, i + 1]);
+      if (i + cols < gridNodes.length) connections.push([i, i + cols]);
+    }
+  }
+
+  // ── Orbital particles ──
+  function makeParticles(n) {
+    particles = [];
+    for (var i = 0; i < n; i++) {
+      var angle = (Math.PI * 2 * i / n);
+      particles.push({
+        angle: angle,
+        radius: 50 + Math.random() * 35,
+        speed: 0.002 + Math.random() * 0.005,
+        size: 1 + Math.random() * 2.5,
+        drift: (Math.random() - 0.5) * 0.12,
+        phase: Math.random() * Math.PI * 2,
+        orbit: 0.35 + Math.random() * 0.65,
+        trail: []
+      });
+    }
+  }
+
+  function draw() {
+    t += 0.016;
+    ctx.clearRect(0, 0, W, H);
+
+    // ── Background gradient ──
+    var bg1 = isDark ? "#0a0a14" : "#eef2f7";
+    var bg2 = isDark ? "#0d1525" : "#dce6f2";
+    var bg3 = isDark ? "#080818" : "#f0f3f8";
+    var grad = ctx.createRadialGradient(cx, cy * 0.4, 0, cx, cy, Math.max(W, H) * 0.8);
+    grad.addColorStop(0, bg2);
+    grad.addColorStop(0.5, bg1);
+    grad.addColorStop(1, bg3);
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, W, H);
+
+    // ── Animated grid mesh ──
+    var gridAlpha = isDark ? 0.06 : 0.08;
+    var accentRgb = isDark ? "108,180,238" : "43,87,151";
+    var nodeHighlightDist = 120;
+
+    // Animate grid nodes
+    for (var i = 0; i < gridNodes.length; i++) {
+      var n = gridNodes[i];
+      n.x = n.ox + Math.sin(t * 0.4 + n.phase) * n.amp;
+      n.y = n.oy + Math.cos(t * 0.3 + n.phase * 1.3) * n.amp;
+    }
+
+    // Draw connections
+    ctx.lineWidth = 0.5;
+    for (var i = 0; i < connections.length; i++) {
+      var a = gridNodes[connections[i][0]], b = gridNodes[connections[i][1]];
+      var mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+      var distToMouse = Math.hypot(mx - mouse.x, my - mouse.y);
+      var distToCenter = Math.hypot(mx - cx, my - cy * 0.4);
+      var centerGlow = Math.max(0, 1 - distToCenter / 250) * 0.12;
+      var mouseGlow = Math.max(0, 1 - distToMouse / nodeHighlightDist) * 0.15;
+      var alpha = gridAlpha + centerGlow + mouseGlow;
+      ctx.beginPath();
+      ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y);
+      ctx.strokeStyle = "rgba(" + accentRgb + "," + alpha + ")";
+      ctx.stroke();
+    }
+
+    // Grid node dots
+    for (var i = 0; i < gridNodes.length; i++) {
+      var n = gridNodes[i];
+      var distToCenter = Math.hypot(n.x - cx, n.y - cy * 0.4);
+      var distToMouse = Math.hypot(n.x - mouse.x, n.y - mouse.y);
+      var centerGlow = Math.max(0, 1 - distToCenter / 200) * 0.3;
+      var mouseGlow = Math.max(0, 1 - distToMouse / nodeHighlightDist) * 0.4;
+      var alpha = 0.04 + centerGlow + mouseGlow;
+      var size = 1 + centerGlow * 2 + mouseGlow * 2;
+      ctx.beginPath();
+      ctx.arc(n.x, n.y, size, 0, Math.PI * 2);
+      ctx.fillStyle = "rgba(" + accentRgb + "," + alpha + ")";
+      ctx.fill();
+    }
+
+    // ── Central ring system (positioned in upper portion) ──
+    var rcy = cy * 0.4;
+
+    // Outer glow rings
+    var ringR = 55;
+    var ringPulse = Math.sin(t * 1.5) * 0.3 + 0.7;
+    for (var g = 4; g >= 0; g--) {
+      ctx.beginPath();
+      ctx.arc(cx, rcy, ringR + g * 10, 0, Math.PI * 2);
+      ctx.strokeStyle = "rgba(" + accentRgb + "," + (0.02 + ringPulse * 0.02) * (5 - g) + ")";
+      ctx.lineWidth = 1 + g * 3;
+      ctx.stroke();
+    }
+
+    // Main ring
+    ctx.beginPath();
+    ctx.arc(cx, rcy, ringR, 0, Math.PI * 2);
+    ctx.strokeStyle = "rgba(" + accentRgb + "," + (0.2 + ringPulse * 0.15) + ")";
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    // Inner ring
+    var innerR = 28 + Math.sin(t * 2) * 3;
+    ctx.beginPath();
+    ctx.arc(cx, rcy, innerR, 0, Math.PI * 2);
+    ctx.strokeStyle = "rgba(" + accentRgb + "," + (0.08 + Math.sin(t * 3) * 0.04) + ")";
+    ctx.lineWidth = 0.5;
+    ctx.stroke();
+
+    // Rotating arc segments
+    for (var s = 0; s < 4; s++) {
+      var arcAngle = t * (0.25 + s * 0.12) + s * Math.PI / 2;
+      ctx.beginPath();
+      ctx.arc(cx, rcy, ringR + 3, arcAngle, arcAngle + 0.6);
+      ctx.strokeStyle = "rgba(" + accentRgb + "," + (0.35 + Math.sin(t * 2 + s) * 0.15) + ")";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+
+    // ── Orbiting particles with trails ──
+    for (var i = 0; i < particles.length; i++) {
+      var p = particles[i];
+      p.angle += p.speed;
+      var wobble = Math.sin(t * 1.2 + p.phase) * p.drift * p.radius;
+      var r = p.radius + wobble + Math.sin(t * 0.5 + p.phase) * 5;
+      var px = cx + Math.cos(p.angle) * r;
+      var py = rcy + Math.sin(p.angle) * r * p.orbit;
+
+      // Trail
+      p.trail.push({ x: px, y: py });
+      if (p.trail.length > 8) p.trail.shift();
+      for (var j = 0; j < p.trail.length - 1; j++) {
+        var ta = (j / p.trail.length) * 0.15;
+        ctx.beginPath();
+        ctx.moveTo(p.trail[j].x, p.trail[j].y);
+        ctx.lineTo(p.trail[j + 1].x, p.trail[j + 1].y);
+        ctx.strokeStyle = "rgba(" + accentRgb + "," + ta + ")";
+        ctx.lineWidth = p.size * 0.6;
+        ctx.stroke();
+      }
+
+      // Glow
+      var alpha = 0.3 + Math.sin(t * 2 + p.phase) * 0.2;
+      ctx.beginPath();
+      ctx.arc(px, py, p.size + 3, 0, Math.PI * 2);
+      ctx.fillStyle = "rgba(" + accentRgb + "," + (alpha * 0.12) + ")";
+      ctx.fill();
+
+      // Core
+      ctx.beginPath();
+      ctx.arc(px, py, p.size, 0, Math.PI * 2);
+      ctx.fillStyle = "rgba(" + accentRgb + "," + alpha + ")";
+      ctx.fill();
+    }
+
+    // ── Center diamond emblem ──
+    ctx.save();
+    ctx.translate(cx, rcy);
+    ctx.rotate(t * 0.4);
+    var ds = 6 + Math.sin(t * 2) * 1;
+    ctx.beginPath();
+    ctx.moveTo(0, -ds); ctx.lineTo(ds, 0); ctx.lineTo(0, ds); ctx.lineTo(-ds, 0);
+    ctx.closePath();
+    ctx.fillStyle = "rgba(" + accentRgb + "," + (0.3 + ringPulse * 0.15) + ")";
+    ctx.fill();
+    ctx.restore();
+
+    // ── Subtle scan line (top to bottom) ──
+    var scanY = ((t * 30) % (H + 40)) - 20;
+    var scanGrad = ctx.createLinearGradient(0, scanY - 15, 0, scanY + 15);
+    scanGrad.addColorStop(0, "rgba(" + accentRgb + ",0)");
+    scanGrad.addColorStop(0.5, "rgba(" + accentRgb + "," + (isDark ? "0.02" : "0.03") + ")");
+    scanGrad.addColorStop(1, "rgba(" + accentRgb + ",0)");
+    ctx.fillStyle = scanGrad;
+    ctx.fillRect(0, scanY - 15, W, 30);
+
+    animId = requestAnimationFrame(draw);
+  }
+
+  resize();
+  makeParticles(45);
+  draw();
+
+  window.addEventListener("resize", function() { resize(); makeParticles(45); });
+
+  // Mouse interaction — grid reacts to cursor
+  document.addEventListener("mousemove", function(e) { mouse.x = e.clientX; mouse.y = e.clientY; });
+  document.addEventListener("mouseleave", function() { mouse.x = -1000; mouse.y = -1000; });
+  // Touch
+  document.addEventListener("touchmove", function(e) {
+    if (e.touches[0]) { mouse.x = e.touches[0].clientX; mouse.y = e.touches[0].clientY; }
+  });
+  document.addEventListener("touchend", function() { mouse.x = -1000; mouse.y = -1000; });
+
+  // Title reveal
+  requestAnimationFrame(function() {
+    setTimeout(function() {
+      var title = document.getElementById("hero-title");
+      var sub = document.getElementById("hero-sub");
+      var sub2 = document.getElementById("hero-sub2");
+      if (title) { title.style.opacity = "1"; title.style.transform = "translateY(0)"; }
+      if (sub) sub.style.opacity = "1";
+      if (sub2) sub2.style.opacity = "1";
+    }, 200);
+  });
+
+  // Stop/start animation based on screen visibility
+  var observer = new MutationObserver(function() {
+    var loadScreen = document.getElementById("screen-load");
+    var canvasEl = document.getElementById("hero-canvas");
+    if (loadScreen && !loadScreen.classList.contains("active")) {
+      if (animId) { cancelAnimationFrame(animId); animId = null; }
+      if (canvasEl) canvasEl.style.display = "none";
+    } else if (loadScreen && loadScreen.classList.contains("active")) {
+      if (canvasEl) canvasEl.style.display = "";
+      if (!animId) { resize(); draw(); }
+    }
+  });
+  observer.observe(document.getElementById("screen-load"), { attributes: true, attributeFilter: ["class"] });
+
+  window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", function(e) {
+    isDark = e.matches;
+  });
+})();
+
+
+// ═══════════════════════════════════════════════════════════
+// LOADING
+// ═══════════════════════════════════════════════════════════
+
+function showError(msg) {
+  var el = document.getElementById("load-error");
+  el.textContent = msg; el.style.display = "block";
+  setTimeout(function() { el.style.display = "none"; }, 8000);
+}
+
+function showWarning(msg) {
+  var el = document.getElementById("load-warn");
+  el.textContent = msg; el.style.display = "block";
+  setTimeout(function() { el.style.display = "none"; }, 12000);
+}
+
+function loadFromPaste() {
+  var t = document.getElementById("json-paste").value.trim();
+  if (t) processInput(t);
+}
+
+function processInput(text) {
+  document.getElementById("load-error").style.display = "none";
+  document.getElementById("load-warn").style.display = "none";
+
+  var data;
+  try { data = JSON.parse(text); }
+  catch (e) { showError("Invalid JSON: " + e.message); return; }
+
+  if (!data.items || !Array.isArray(data.items)) { showError('Need {"items": [...]}'); return; }
+  if (data.items.length === 0)        { showError("Empty items array"); return; }
+  if (data.items.length > MAX_ITEMS)  { showError("Too many items (" + data.items.length + "). Max: " + MAX_ITEMS); return; }
+
+  // Validate every item
+  for (var i = 0; i < data.items.length; i++) {
+    var it = data.items[i];
+    if (!it.sentence || typeof it.sentence !== "string") { showError("Item " + i + ": missing or invalid 'sentence'"); return; }
+    if (!it.feature  || typeof it.feature  !== "string") { showError("Item " + i + ": missing or invalid 'feature'"); return; }
+    if (it.auto_label === undefined || it.auto_label === null) { showError("Item " + i + ": missing 'auto_label'"); return; }
+  }
+
+  // Warn before overwriting
+  var existing = safeGetItem(LS_KEY_RESPONSES);
+  if (existing) {
+    try {
+      var ex = JSON.parse(existing);
+      var n = Object.keys(ex.responses || {}).length;
+      if (n > 0 && !confirm("You have " + n + " reviewed items from a previous session. Loading a new dataset will erase that progress.\n\nContinue?")) return;
+    } catch (e) {}
+  }
+
+  // Build labels-per-feature
+  labelsPerFeature = {};
+  data.items.forEach(function(it) {
+    if (!labelsPerFeature[it.feature]) labelsPerFeature[it.feature] = [];
+    var lbl = String(it.auto_label);
+    if (labelsPerFeature[it.feature].indexOf(lbl) === -1) labelsPerFeature[it.feature].push(lbl);
+  });
+  Object.keys(labelsPerFeature).forEach(function(f) { labelsPerFeature[f].sort(); });
+
+  // Dataset fingerprint
+  datasetFingerprint = fnv1a(JSON.stringify(data.items));
+
+  // Summary
+  var featureCounts = {};
+  data.items.forEach(function(it) { featureCounts[it.feature] = (featureCounts[it.feature] || 0) + 1; });
+  var featureList = Object.entries(featureCounts)
+    .sort(function(a, b) { return b[1] - a[1]; })
+    .map(function(e) { return esc(e[0]) + ": " + e[1]; }).join(", ");
+  var info = document.getElementById("load-info");
+  info.innerHTML = '<span class="count">' + data.items.length + '</span> items · <span class="count">' + Object.keys(featureCounts).length + '</span> features<br>' + featureList;
+  info.style.display = "block";
+
+  // Warn about missing definitions
+  var missing = [], seen = {};
+  data.items.forEach(function(it) {
+    var k = it.feature + "|" + it.auto_label;
+    if (!seen[k]) { seen[k] = true; if (!LABEL_DEFINITIONS[k]) missing.push(k); }
+  });
+  if (missing.length > 0) showWarning("No label definitions for: " + missing.join(", "));
+
+  // Init state
+  dataset            = data;
+  responses          = {};
+  currentIndex       = 0;
+  priorTimeMs        = 0;
+  saveDegraded       = false;
+  fatigueAcked       = false;
+  awaitingCorrection = false;
+  processingResponse = false;
+  originalResponseCount = 0;
+  originalItemCount  = data.items.length;
+  hasGroundTruth     = data.items.some(function(it) { return it._ground_truth !== undefined; });
+
+  var built      = buildShuffledOrder(data);
+  shuffledOrder  = built.order;
+  probeSet       = built.probes;
+
+  if (!safeSetItem(LS_KEY_DATASET, JSON.stringify({
+    items: data.items,
+    labelsPerFeature: labelsPerFeature,
+    fingerprint: datasetFingerprint,
+    originalItemCount: originalItemCount,
+    hasGroundTruth: hasGroundTruth
+  }))) {
+    showError("Cannot save to browser storage. Storage may be full.");
+    return;
+  }
+  persistResponses();
+  startReview();
+}
+
+
+// ═══════════════════════════════════════════════════════════
+// RESUME
+// ═══════════════════════════════════════════════════════════
+
+function checkForResumableSession() {
+  try {
+    var sr = safeGetItem(LS_KEY_RESPONSES), sd = safeGetItem(LS_KEY_DATASET);
+    if (!sr || !sd) return;
+    var s = JSON.parse(sr), d = JSON.parse(sd);
+    if (!d.items || !s.responses) return;
+    var n = Object.keys(s.responses).length;
+    if (n === 0) return;
+    document.getElementById("resume-section").style.display = "block";
+    var ts = s.timestamp ? new Date(s.timestamp).toLocaleString() : "unknown";
+    var orig = d.originalItemCount || d.items.length;
+    document.getElementById("resume-info").textContent = n + "/" + orig + " reviewed · Last: " + ts;
+  } catch (e) {}
+}
+
+function resumeSession() {
+  var sd, sr;
+  try { sd = JSON.parse(safeGetItem(LS_KEY_DATASET)); }
+  catch (e) { showError("Stored dataset is corrupt. Reset and reload your data."); return; }
+  try { sr = JSON.parse(safeGetItem(LS_KEY_RESPONSES)); }
+  catch (e) { showError("Stored responses are corrupt. Reset and reload your data."); return; }
+
+  var err = validateStoredSession(sd, sr);
+  if (err) { showError("Cannot resume: " + err); return; }
+
+  try {
+    dataset            = { items: sd.items };
+    labelsPerFeature   = sd.labelsPerFeature || {};
+    datasetFingerprint = sd.fingerprint || "";
+    originalItemCount  = sd.originalItemCount || sd.items.length;
+    hasGroundTruth     = sd.hasGroundTruth || false;
+    responses          = sr.responses || {};
+    currentIndex       = sr.currentIndex || 0;
+    priorTimeMs        = sr.totalTimeMs || 0;
+    saveDegraded       = false;
+    fatigueAcked       = false;
+    awaitingCorrection = false;
+    processingResponse = false;
+    reviewerName       = sr.reviewerName || "";
+    if (sr.sessionNonce) sessionNonce = sr.sessionNonce;
+    if (sr.hashChainHead) hashChainHead = sr.hashChainHead;
+
+    // Rebuild cached counter from stored responses
+    originalResponseCount = 0;
+    Object.keys(responses).forEach(function(k) {
+      if (k.indexOf("probe_") !== 0) originalResponseCount++;
+    });
+
+    var built     = buildShuffledOrder(dataset);
+    shuffledOrder = built.order;
+    probeSet      = built.probes;
+
+    // Clamp currentIndex to valid range
+    if (currentIndex > shuffledOrder.length) currentIndex = shuffledOrder.length;
+
+    startReview();
+  } catch (e) { showError("Resume failed: " + e.message); }
+}
+
+
+// ═══════════════════════════════════════════════════════════
+// SHUFFLE + PROBES
+// ═══════════════════════════════════════════════════════════
+
+function buildShuffledOrder(data) {
+  var buckets = {};
+  data.items.forEach(function(it, i) {
+    if (!buckets[it.feature]) buckets[it.feature] = [];
+    buckets[it.feature].push(i);
+  });
+
+  var rng = mulberry32(42);
+  Object.values(buckets).forEach(function(arr) {
+    for (var i = arr.length - 1; i > 0; i--) {
+      var j = Math.floor(rng() * (i + 1));
+      var t = arr[i]; arr[i] = arr[j]; arr[j] = t;
+    }
+  });
+
+  var features = Object.keys(buckets).sort();
+  var order = [];
+  var maxLen = Math.max.apply(null, features.map(function(f) { return buckets[f].length; }));
+  for (var r = 0; r < maxLen; r++) {
+    for (var fi = 0; fi < features.length; fi++) {
+      if (r < buckets[features[fi]].length) order.push(buckets[features[fi]][r]);
+    }
+  }
+
+  // Insert consistency probes
+  var probes = new Set();
+  var n = data.items.length;
+  if (n >= PROBE_MIN_DATASET) {
+    var probeCount = Math.max(PROBE_MIN, Math.min(PROBE_MAX, Math.round(n * PROBE_RATE)));
+    var probeRng = mulberry32(7919);
+
+    // Pick which items to re-test
+    var candidates = order.slice();
+    for (var i = candidates.length - 1; i > 0; i--) {
+      var j = Math.floor(probeRng() * (i + 1));
+      var t = candidates[i]; candidates[i] = candidates[j]; candidates[j] = t;
+    }
+    var probeItems = candidates.slice(0, probeCount);
+
+    // Append probes to end, then shuffle the tail zone to distribute them
+    // This avoids the splice-shift bug entirely
+    var probeZoneStart = order.length;
+    for (var i = 0; i < probeItems.length; i++) {
+      order.push(probeItems[i]);
+    }
+
+    // Shuffle the region from 50% onward (mix probes into second half)
+    var mixZoneStart = Math.floor(probeZoneStart * 0.5);
+    for (var i = order.length - 1; i > mixZoneStart; i--) {
+      var j = mixZoneStart + Math.floor(probeRng() * (i - mixZoneStart + 1));
+      var t = order[i]; order[i] = order[j]; order[j] = t;
+    }
+
+    // Mark second occurrences as probes
+    var seenItems = {};
+    for (var i = 0; i < order.length; i++) {
+      if (seenItems[order[i]]) {
+        probes.add(i);
+      } else {
+        seenItems[order[i]] = true;
+      }
+    }
+
+    // Gap enforcement: verify and repair
+    // Build original→position map (first occurrence only)
+    var firstPos = {};
+    for (var i = 0; i < order.length; i++) {
+      if (firstPos[order[i]] === undefined) firstPos[order[i]] = i;
+    }
+
+    // For each probe, check gap; if too close, swap with a later non-probe item
+    var probeList = Array.from(probes).sort(function(a, b) { return a - b; });
+    for (var pi = 0; pi < probeList.length; pi++) {
+      var probePos = probeList[pi];
+      var itemIdx = order[probePos];
+      var origPos = firstPos[itemIdx];
+      var gap = probePos - origPos;
+
+      if (gap < PROBE_MIN_GAP) {
+        // Find a non-probe position further back to swap with
+        var swapped = false;
+        for (var candidate = probePos + PROBE_MIN_GAP; candidate < order.length; candidate++) {
+          if (!probes.has(candidate)) {
+            // Swap
+            var tmp = order[probePos];
+            order[probePos] = order[candidate];
+            order[candidate] = tmp;
+            // Update probe set: remove old position, add new
+            probes.delete(probePos);
+            probes.add(candidate);
+            // Update probeList for subsequent iterations
+            probeList[pi] = candidate;
+            swapped = true;
+            break;
+          }
+        }
+        // If no valid swap target (very rare), probe stays — logged but not fatal
+        if (!swapped) {
+          // Try swapping backward toward the end
+          for (var candidate = order.length - 1; candidate > probePos + PROBE_MIN_GAP; candidate--) {
+            if (!probes.has(candidate)) {
+              var tmp = order[probePos];
+              order[probePos] = order[candidate];
+              order[candidate] = tmp;
+              probes.delete(probePos);
+              probes.add(candidate);
+              probeList[pi] = candidate;
+              break;
+            }
+          }
+        }
+      }
+    }
+
+    // Rebuild firstPos after swaps (probes may have moved originals)
+    // Re-verify by rebuilding probe set from scratch
+    probes = new Set();
+    var seen2 = {};
+    for (var i = 0; i < order.length; i++) {
+      if (seen2[order[i]]) probes.add(i);
+      else seen2[order[i]] = true;
+    }
+  }
+
+  return { order: order, probes: probes };
+}
+
+function mulberry32(seed) {
+  return function() {
+    seed |= 0;
+    seed = seed + 0x6D2B79F5 | 0;
+    var t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+
+
+// ═══════════════════════════════════════════════════════════
+// REVIEW
+// ═══════════════════════════════════════════════════════════
+
+function startReview() {
+  var inputName = (document.getElementById("reviewer-name").value || "").trim();
+  if (inputName) reviewerName = inputName; // only overwrite if user typed something
+  sessionStartMs = Date.now();
+  showScreen("screen-review");
+  renderCurrentItem();
+}
+
+function renderCurrentItem() {
+  try {
+    _renderCurrentItemInner();
+  } catch (e) {
+    // Error boundary: don't let a render bug kill the whole tool
+    console.error("Render error at index " + currentIndex + ":", e);
+    var card = document.getElementById("sentence-card");
+    if (card) card.innerHTML = '<p style="color:var(--red)">Error rendering item ' + currentIndex + '. <button onclick="currentIndex++;renderCurrentItem()" style="text-decoration:underline;border:none;background:none;color:var(--blue);cursor:pointer">Skip →</button></p>';
+  }
+}
+
+function _renderCurrentItemInner() {
+  if (currentIndex >= shuffledOrder.length) { showStats(); return; }
+
+  awaitingCorrection = false;
+  awaitingReason = false;
+  document.getElementById("response-section").style.display = "";
+  document.getElementById("correction-section").style.display = "none";
+  document.getElementById("reason-section").style.display = "none";
+
+  var reviewed = countOriginalResponses();
+  var pct = Math.min(100, (reviewed / originalItemCount) * 100);
+  document.getElementById("progress-fill").style.width = pct + "%";
+  document.getElementById("progress-text").textContent = reviewed + "/" + originalItemCount;
+
+  var itemIndex = shuffledOrder[currentIndex];
+  var item = dataset.items[itemIndex];
+  var color = FEATURE_COLORS[item.feature] || "#B4B2A9";
+
+  var badge = document.getElementById("feature-badge");
+  badge.textContent = item.feature;
+  badge.style.background = color + "22";
+  badge.style.color = color;
+  badge.style.border = "1px solid " + color + "66";
+
+  document.getElementById("sentence-text").textContent = item.sentence;
+  document.getElementById("auto-label").textContent = item.auto_label;
+  document.getElementById("label-definition").textContent =
+    LABEL_DEFINITIONS[item.feature + "|" + item.auto_label] || "Is this label correct for this sentence?";
+  document.getElementById("undo-btn").disabled = (currentIndex === 0);
+
+  itemShownAtMs = Date.now();
+  checkFatigue();
+  updateTimerDisplay();
+}
+
+function countOriginalResponses() {
+  return originalResponseCount;
+}
+
+function recordResponse(verdict) {
+  if (!dataset || currentIndex >= shuffledOrder.length || awaitingCorrection || awaitingReason) return;
+  if (processingResponse) return; // debounce double-tap
+  processingResponse = true;
+
+  var itemIndex = shuffledOrder[currentIndex];
+  var item = dataset.items[itemIndex];
+  var isProbe = probeSet.has(currentIndex);
+  var key = (isProbe ? "probe_" : "") + item.feature + "_" + itemIndex;
+
+  // For "wrong" items, response_time_ms will be set in submitCorrection
+  // to include correction deliberation time
+  var responseTimeMs = (verdict !== "wrong" && itemShownAtMs) ? Date.now() - itemShownAtMs : null;
+
+  responses[key] = {
+    index:            itemIndex,
+    feature:          item.feature,
+    sentence:         item.sentence,
+    auto_label:       item.auto_label,
+    human_verdict:    verdict,
+    correction:       null,
+    is_probe:         isProbe,
+    response_time_ms: responseTimeMs,
+    reviewed_at:      new Date().toISOString(),
+    chain_hash:       advanceHashChain(key, verdict)
+  };
+
+  // Update cached counter
+  if (!isProbe) originalResponseCount++;
+
+  var card = document.getElementById("sentence-card");
+  card.style.transform = verdict === "correct" ? "translateX(3px)" : verdict === "wrong" ? "translateX(-3px)" : "translateY(2px)";
+  setTimeout(function() { card.style.transform = "none"; }, 120);
+
+  if (verdict === "wrong") {
+    pendingWrongKey = key;
+    processingResponse = false;
+    showCorrectionOptions(item);
+    return;
+  }
+
+  if (verdict === "unsure") {
+    pendingReasonKey = key;
+    processingResponse = false;
+    showReasonSection();
+    return;
+  }
+
+  currentIndex++;
+  persistResponses();
+  processingResponse = false;
+  if (currentIndex >= shuffledOrder.length) showStats(); else renderCurrentItem();
+}
+
+
+// ═══════════════════════════════════════════════════════════
+// CORRECTION
+// ═══════════════════════════════════════════════════════════
+
+function showCorrectionOptions(item) {
+  awaitingCorrection = true;
+  document.getElementById("response-section").style.display = "none";
+  document.getElementById("correction-section").style.display = "";
+
+  var opts = document.getElementById("correction-options");
+  opts.innerHTML = "";
+
+  var labels = labelsPerFeature[item.feature] || [];
+  var otherLabels = labels.filter(function(l) { return l !== String(item.auto_label); });
+
+  if (otherLabels.length === 0) {
+    // Binary feature with only one label seen — skip correction
+    submitCorrection(null);
+    return;
+  }
+
+  otherLabels.forEach(function(label, idx) {
+    var chip = document.createElement("button");
+    chip.className = "correction-chip";
+    chip.textContent = (idx + 1) + ". " + label;
+    chip.onclick = function() { submitCorrection(label); };
+    opts.appendChild(chip);
+  });
+}
+
+function submitCorrection(correctedLabel) {
+  if (pendingWrongKey && responses[pendingWrongKey]) {
+    responses[pendingWrongKey].correction = correctedLabel;
+    // Record full response time: from item display to correction completion
+    responses[pendingWrongKey].response_time_ms = itemShownAtMs ? Date.now() - itemShownAtMs : null;
+  }
+  awaitingCorrection = false;
+  pendingReasonKey = pendingWrongKey;
+  pendingWrongKey = null;
+  showReasonSection();
+}
+
+function showReasonSection() {
+  awaitingReason = true;
+  selectedReasons = [];
+  document.getElementById("response-section").style.display = "none";
+  document.getElementById("correction-section").style.display = "none";
+  document.getElementById("reason-section").style.display = "";
+  document.getElementById("reason-comment").value = "";
+
+  var row = document.getElementById("reason-chips");
+  row.innerHTML = "";
+  REASON_CHIPS.forEach(function(label) {
+    var chip = document.createElement("button");
+    chip.className = "reason-chip";
+    chip.textContent = label;
+    chip.onclick = function() {
+      chip.classList.toggle("selected");
+      var idx = selectedReasons.indexOf(label);
+      if (idx === -1) selectedReasons.push(label);
+      else selectedReasons.splice(idx, 1);
+    };
+    row.appendChild(chip);
+  });
+}
+
+function submitReason() {
+  var comment = document.getElementById("reason-comment").value.trim();
+  var reasons = selectedReasons.slice();
+  if (comment) reasons.push(comment);
+
+  if (pendingReasonKey && responses[pendingReasonKey]) {
+    responses[pendingReasonKey].disagree_reasons = reasons.length > 0 ? reasons : null;
+  }
+
+  awaitingReason = false;
+  pendingReasonKey = null;
+  document.getElementById("reason-section").style.display = "none";
+  currentIndex++;
+  persistResponses();
+  if (currentIndex >= shuffledOrder.length) showStats(); else renderCurrentItem();
+}
+
+
+// ═══════════════════════════════════════════════════════════
+// UNDO
+// ═══════════════════════════════════════════════════════════
+
+function undoLastResponse() {
+  if (currentIndex === 0 || awaitingCorrection || awaitingReason) return;
+  currentIndex--;
+  var itemIndex = shuffledOrder[currentIndex];
+  var item = dataset.items[itemIndex];
+  var isProbe = probeSet.has(currentIndex);
+  var key = (isProbe ? "probe_" : "") + item.feature + "_" + itemIndex;
+  if (responses[key] && !isProbe) originalResponseCount--;
+  delete responses[key];
+  persistResponses();
+  renderCurrentItem();
+}
+
+
+// ═══════════════════════════════════════════════════════════
+// FATIGUE
+// ═══════════════════════════════════════════════════════════
+
+function checkFatigue() {
+  if (fatigueAcked) return;
+  var all = Object.values(responses);
+  if (all.length < FATIGUE_WINDOW || all.length % FATIGUE_CHECK_EVERY !== 0) return;
+
+  var elapsedMs = priorTimeMs + (sessionStartMs ? Date.now() - sessionStartMs : 0);
+  if (elapsedMs < FATIGUE_MIN_MINUTES * 60000) return;
+
+  var sorted = all.filter(function(r) { return r.reviewed_at; })
+    .sort(function(a, b) { return a.reviewed_at < b.reviewed_at ? 1 : -1; });
+  var win = sorted.slice(0, FATIGUE_WINDOW);
+
+  var errors = win.filter(function(r) { return r.human_verdict !== "correct"; }).length;
+  var times = win.filter(function(r) { return r.response_time_ms > 0; }).map(function(r) { return r.response_time_ms; });
+  var avgSec = times.length > 0 ? times.reduce(function(a, b) { return a + b; }, 0) / times.length / 1000 : 999;
+  var rushing = avgSec < FATIGUE_RUSH_SECONDS;
+  var errorHigh = errors / win.length >= FATIGUE_ERROR_RATE;
+
+  if (!rushing && !errorHigh) return;
+
+  var slot = document.getElementById("fatigue-slot");
+  if (slot.children.length > 0) return;
+
+  var minutes = Math.round(elapsedMs / 60000);
+  var reason = rushing
+    ? "Your responses are getting faster — that can mean fatigue."
+    : "Your uncertainty rate is elevated over the last " + FATIGUE_WINDOW + " items.";
+
+  var nudge = document.createElement("div");
+  nudge.className = "fatigue-nudge";
+  nudge.innerHTML = '<span>' + reason + ' You\'ve been at it for ' + minutes + ' min. A short break helps accuracy.</span><button onclick="dismissFatigue()" aria-label="Dismiss">✕</button>';
+  slot.appendChild(nudge);
+}
+
+function dismissFatigue() {
+  fatigueAcked = true;
+  document.getElementById("fatigue-slot").innerHTML = "";
+}
+
+
+// ═══════════════════════════════════════════════════════════
+// TIMER
+// ═══════════════════════════════════════════════════════════
+
+function updateTimerDisplay() {
+  var el = document.getElementById("timer-display");
+  var reviewed = countOriginalResponses();
+  if (reviewed < 5) { el.textContent = ""; return; }
+
+  var elapsedMs = priorTimeMs + (sessionStartMs ? Date.now() - sessionStartMs : 0);
+  var totalReviewed = Object.keys(responses).length;
+  var avgMs = elapsedMs / totalReviewed;
+  var remaining = shuffledOrder.length - Object.keys(responses).length;
+  var eta = Math.ceil(avgMs * remaining / 60000);
+
+  el.textContent = "~" + eta + " min left · " + (avgMs / 1000).toFixed(1) + "s avg";
+}
+
+
+// ═══════════════════════════════════════════════════════════
+// PERSISTENCE
+// ═══════════════════════════════════════════════════════════
+
+function safeGetItem(key) { try { return localStorage.getItem(key); } catch (e) { return null; } }
+function safeSetItem(key, val) { try { localStorage.setItem(key, val); return true; } catch (e) { return false; } }
+
+function persistResponses() {
+  var ms = sessionStartMs ? Date.now() - sessionStartMs : 0;
+  var ok = safeSetItem(LS_KEY_RESPONSES, JSON.stringify({
+    responses: responses, currentIndex: currentIndex,
+    totalTimeMs: priorTimeMs + ms, timestamp: new Date().toISOString(),
+    checksum: computeChecksum(), reviewerName: reviewerName,
+    sessionNonce: sessionNonce, hashChainHead: hashChainHead
+  }));
+  if (!ok && !saveDegraded) {
+    saveDegraded = true;
+    var w = document.createElement("div");
+    w.className = "warn-msg"; w.id = "save-degraded-warning";
+    w.textContent = "⚠ Browser storage full — progress is NOT being saved. Export now to avoid data loss.";
+    var scr = document.getElementById("screen-review");
+    if (!document.getElementById("save-degraded-warning")) scr.insertBefore(w, scr.firstChild);
+  }
+}
+
+
+// ═══════════════════════════════════════════════════════════
+// SAVE / LOAD PROGRESS FILE
+// ═══════════════════════════════════════════════════════════
+
+function saveProgressToFile() {
+  if (!dataset) return;
+  var reviewed = countOriginalResponses();
+  if (reviewed === 0) { alert("Nothing to save yet."); return; }
+
+  var ms = sessionStartMs ? Date.now() - sessionStartMs : 0;
+  var save = {
+    _type: "sfrp_audit_save",
+    _version: TOOL_VERSION,
+    saved_at: new Date().toISOString(),
+    reviewerName: reviewerName,
+    dataset: {
+      items: dataset.items,
+      labelsPerFeature: labelsPerFeature,
+      fingerprint: datasetFingerprint,
+      originalItemCount: originalItemCount,
+      hasGroundTruth: hasGroundTruth
+    },
+    session: {
+      responses: responses,
+      currentIndex: currentIndex,
+      totalTimeMs: priorTimeMs + ms,
+      checksum: computeChecksum(),
+      sessionNonce: sessionNonce,
+      hashChainHead: hashChainHead
+    },
+    summary: {
+      reviewed: reviewed,
+      total: originalItemCount,
+      percent: Math.round((reviewed / originalItemCount) * 100)
+    }
+  };
+
+  var blob = new Blob([JSON.stringify(save, null, 2)], { type: "application/json" });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement("a");
+  var ts = new Date().toISOString().slice(0, 10).replace(/-/g, "");
+  a.href = url;
+  a.download = "sfrp_audit_save_" + ts + "_" + reviewed + "of" + originalItemCount + ".json";
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a); URL.revokeObjectURL(url);
+}
+
+function loadProgressFromFile(text) {
+  var save;
+  try { save = JSON.parse(text); }
+  catch (e) { showError("Invalid save file: " + e.message); return; }
+
+  // Validate it's a save file, not an audit set or export
+  if (!save._type || save._type !== "sfrp_audit_save") {
+    showError("This is not a save file. Use the top drop zone for audit_set.json.");
+    return;
+  }
+  if (!save.dataset || !save.dataset.items || !save.session || !save.session.responses) {
+    showError("Save file is corrupt or incomplete.");
+    return;
+  }
+
+  // Warn before overwriting existing progress
+  var existingCount = countOriginalResponses();
+  if (existingCount > 0) {
+    if (!confirm("You have " + existingCount + " reviewed items in this session. Loading a save file will replace them.\n\nContinue?")) return;
+  }
+
+  try {
+    var sd = save.dataset;
+    var sr = save.session;
+
+    // Validate stored data
+    var err = validateStoredSession(sd, sr);
+    if (err) { showError("Save file validation failed: " + err); return; }
+
+    dataset            = { items: sd.items };
+    labelsPerFeature   = sd.labelsPerFeature || {};
+    datasetFingerprint = sd.fingerprint || "";
+    originalItemCount  = sd.originalItemCount || sd.items.length;
+    hasGroundTruth     = sd.hasGroundTruth || false;
+    responses          = sr.responses || {};
+    currentIndex       = sr.currentIndex || 0;
+    priorTimeMs        = sr.totalTimeMs || 0;
+    saveDegraded       = false;
+    fatigueAcked       = false;
+    awaitingCorrection = false;
+    processingResponse = false;
+    reviewerName       = save.reviewerName || "";
+    if (sr.sessionNonce) sessionNonce = sr.sessionNonce;
+    if (sr.hashChainHead) hashChainHead = sr.hashChainHead;
+
+    // Rebuild cached counter
+    originalResponseCount = 0;
+    Object.keys(responses).forEach(function(k) {
+      if (k.indexOf("probe_") !== 0) originalResponseCount++;
+    });
+
+    var built     = buildShuffledOrder(dataset);
+    shuffledOrder = built.order;
+    probeSet      = built.probes;
+
+    if (currentIndex > shuffledOrder.length) currentIndex = shuffledOrder.length;
+
+    // Persist to localStorage too so browser resume works
+    safeSetItem(LS_KEY_DATASET, JSON.stringify(sd));
+    persistResponses();
+
+    // Populate name field
+    if (reviewerName) document.getElementById("reviewer-name").value = reviewerName;
+
+    var reviewed = countOriginalResponses();
+    console.log("Restored save: " + reviewed + "/" + originalItemCount + " reviewed");
+
+    startReview();
+  } catch (e) { showError("Failed to load save: " + e.message); }
+}
+
+
+// ═══════════════════════════════════════════════════════════
+// HASHING + UTILITIES
+// ═══════════════════════════════════════════════════════════
+
+function fnv1a(input) {
+  var h = 0x811c9dc5;
+  for (var i = 0; i < input.length; i++) { h ^= input.charCodeAt(i); h = Math.imul(h, 0x01000193); }
+  return (h >>> 0).toString(16).padStart(8, "0");
+}
+
+// SHA-256 via Web Crypto API (async)
+async function sha256(input) {
+  var data = new TextEncoder().encode(input);
+  var buf = await crypto.subtle.digest("SHA-256", data);
+  return Array.from(new Uint8Array(buf)).map(function(b) { return b.toString(16).padStart(2, "0"); }).join("");
+}
+
+// Synchronous fast hash for display/localStorage (FNV-1a)
+function computeChecksum() {
+  var keys = Object.keys(responses).sort();
+  return fnv1a(keys.map(function(k) {
+    var r = responses[k];
+    return k + ":" + r.human_verdict + ":" + (r.correction || "") + ":" + (r.disagree_reasons ? r.disagree_reasons.join(",") : "");
+  }).join("|"));
+}
+
+// Full integrity hash over all response data (async, for export)
+async function computeIntegrityHash() {
+  var keys = Object.keys(responses).sort();
+  var payload = keys.map(function(k) {
+    var r = responses[k];
+    return JSON.stringify({
+      k: k, v: r.human_verdict, c: r.correction,
+      t: r.response_time_ms, dr: r.disagree_reasons,
+      i: r.index, f: r.feature, p: r.is_probe
+    });
+  }).join("\n");
+  return await sha256(payload);
+}
+
+// Session nonce: random token generated once per session, proves all
+// responses came from the same browser session
+var sessionNonce = (function() {
+  var arr = new Uint8Array(16);
+  crypto.getRandomValues(arr);
+  return Array.from(arr).map(function(b) { return b.toString(16).padStart(2, "0"); }).join("");
+})();
+
+// Hash chain: each response includes hash of previous, creating
+// a tamper-evident log. Editing any response breaks the chain.
+var hashChainHead = "genesis";
+
+function advanceHashChain(key, verdict) {
+  var input = hashChainHead + "|" + key + "|" + verdict + "|" + Date.now();
+  hashChainHead = fnv1a(input);
+  return hashChainHead;
+}
+
+// Reviewer ID: SHA-256 truncated to 12 hex chars (async)
+async function computeReviewerId(name) {
+  if (!name) return "anonymous";
+  var hash = await sha256("sfrp-reviewer-v5:" + name.toLowerCase().trim());
+  return "R-" + hash.slice(0, 12);
+}
+
+/** Prevent HTML injection from user-provided strings (feature names, labels). */
+function esc(str) {
+  var d = document.createElement("div");
+  d.textContent = str;
+  return d.innerHTML;
+}
+
+/**
+ * Validate stored session integrity on resume.
+ * Returns null if valid, or an error message string.
+ */
+function validateStoredSession(sd, sr) {
+  if (!sd || !sd.items || !Array.isArray(sd.items)) return "Stored dataset is corrupt.";
+  if (!sr || !sr.responses) return "Stored responses are corrupt.";
+
+  // Fingerprint check: does stored dataset match what was originally loaded?
+  if (sd.fingerprint) {
+    var recomputed = fnv1a(JSON.stringify(sd.items));
+    if (recomputed !== sd.fingerprint) return "Dataset integrity check failed — stored data may be corrupt.";
+  }
+
+  // Index bounds: do all response indices point to valid items?
+  var maxIdx = sd.items.length - 1;
+  var badKeys = Object.keys(sr.responses).filter(function(k) {
+    var r = sr.responses[k];
+    return r.index < 0 || r.index > maxIdx;
+  });
+  if (badKeys.length > 0) return "Found " + badKeys.length + " responses with out-of-bounds indices.";
+
+  // currentIndex sanity
+  if (typeof sr.currentIndex !== "number" || sr.currentIndex < 0) return "Stored position is invalid.";
+
+  return null; // valid
+}
+
+
+// ═══════════════════════════════════════════════════════════
+// STATS
+// ═══════════════════════════════════════════════════════════
+
+function showStats() {
+  var reviewed = countOriginalResponses();
+  var allOriginalsDone = reviewed >= originalItemCount && originalItemCount > 0;
+  var allDone = Object.keys(responses).length >= shuffledOrder.length;
+
+  document.getElementById("stats-subtitle").textContent =
+    reviewed + " of " + originalItemCount + " (" + Math.round((reviewed / originalItemCount) * 100) + "%)";
+
+  // ── Personal stats card ──
+  var psSlot = document.getElementById("personal-stats-slot");
+  psSlot.innerHTML = "";
+  if (reviewed > 0) {
+    var totalMs = priorTimeMs + (sessionStartMs ? Date.now() - sessionStartMs : 0);
+    var minutes = Math.round(totalMs / 60000);
+    var avgSec = (totalMs / 1000 / reviewed).toFixed(1);
+    var wrongCount = 0, unsureCount = 0, correctCount = 0;
+    var featuresSeen = {};
+    Object.entries(responses).forEach(function(e) {
+      if (e[0].indexOf("probe_") === 0) return;
+      var r = e[1];
+      if (r.human_verdict === "correct") correctCount++;
+      if (r.human_verdict === "wrong") wrongCount++;
+      if (r.human_verdict === "unsure") unsureCount++;
+      featuresSeen[r.feature] = true;
+    });
+    var errorsFound = wrongCount;
+    var featCount = Object.keys(featuresSeen).length;
+    var name = reviewerName || "Reviewer";
+
+    var card = document.createElement("div");
+    card.className = "personal-card";
+    card.innerHTML = '<h3>' + esc(name) + "'s contribution</h3>" +
+      '<div class="personal-grid">' +
+        '<div class="personal-stat"><span class="stat-value">' + reviewed + '</span><span class="stat-label">items reviewed</span></div>' +
+        '<div class="personal-stat"><span class="stat-value">' + minutes + ' min</span><span class="stat-label">time invested</span></div>' +
+        '<div class="personal-stat"><span class="stat-value">' + errorsFound + '</span><span class="stat-label">errors caught</span></div>' +
+        '<div class="personal-stat"><span class="stat-value">' + featCount + '</span><span class="stat-label">features covered</span></div>' +
+        '<div class="personal-stat"><span class="stat-value">' + avgSec + 's</span><span class="stat-label">avg per item</span></div>' +
+        '<div class="personal-stat"><span class="stat-value">' + unsureCount + '</span><span class="stat-label">ambiguities flagged</span></div>' +
+      '</div>';
+    psSlot.appendChild(card);
+  }
+
+  // ── Per-feature table (originals only) ──
+  var fs = {};
+  Object.entries(responses).forEach(function(e) {
+    if (e[0].indexOf("probe_") === 0) return;
+    var r = e[1];
+    if (!fs[r.feature]) fs[r.feature] = { correct: 0, wrong: 0, unsure: 0, total: 0 };
+    fs[r.feature].total++;
+    fs[r.feature][r.human_verdict]++;
+  });
+
+  var tbody = document.getElementById("stats-body");
+  tbody.innerHTML = "";
+  Object.keys(fs).sort().forEach(function(f) {
+    var s = fs[f], dec = s.correct + s.wrong;
+    var rate = dec > 0 ? s.correct / dec * 100 : 0;
+    var cls, sym;
+    if (dec === 0)      { cls = ""; sym = "—"; }
+    else if (rate >= 90) { cls = "rate-good"; sym = rate.toFixed(1) + "%"; }
+    else if (rate >= 80) { cls = "rate-warn"; sym = "⚠ " + rate.toFixed(1) + "%"; }
+    else                 { cls = "rate-bad";  sym = "✗ " + rate.toFixed(1) + "%"; }
+    var col = FEATURE_COLORS[f] || "#B4B2A9";
+    var tr = document.createElement("tr");
+    tr.innerHTML = '<td><span class="feature-dot" style="background:' + esc(col) + '"></span>' + esc(f) + '</td>' +
+      '<td>' + s.total + '</td><td>' + s.correct + '</td><td>' + s.unsure + '</td><td>' + s.wrong + '</td>' +
+      '<td class="' + cls + '">' + sym + '</td>';
+    tbody.appendChild(tr);
+  });
+
+  // ── Reason summary ──
+  var rsSlot = document.getElementById("reason-summary-slot");
+  rsSlot.innerHTML = "";
+  var reasonCounts = {};
+  var totalReasons = 0;
+  Object.values(responses).forEach(function(r) {
+    if (!r.disagree_reasons) return;
+    r.disagree_reasons.forEach(function(reason) {
+      reasonCounts[reason] = (reasonCounts[reason] || 0) + 1;
+      totalReasons++;
+    });
+  });
+  if (totalReasons > 0) {
+    var sorted = Object.entries(reasonCounts).sort(function(a, b) { return b[1] - a[1]; });
+    var maxCount = sorted[0][1];
+    var box = document.createElement("div");
+    box.className = "reason-summary";
+    var html = '<h3>Disagreement reasons</h3>';
+    sorted.forEach(function(pair) {
+      var pct = Math.round(pair[1] / maxCount * 100);
+      html += '<div class="reason-bar-row">' +
+        '<span class="reason-bar-label">' + esc(pair[0]) + '</span>' +
+        '<div class="reason-bar-track"><div class="reason-bar-fill" style="width:' + pct + '%"></div></div>' +
+        '<span class="reason-bar-count">' + pair[1] + '</span></div>';
+    });
+    box.innerHTML = html;
+    rsSlot.appendChild(box);
+  }
+
+  renderConsistency();
+
+  document.getElementById("integrity-bar").innerHTML =
+    "Checksum: " + computeChecksum() + " · Items: " + originalItemCount + " · Reviewed: " + reviewed +
+    (probeSet.size > 0 ? " · Probes: " + probeSet.size : "") +
+    "<br>Session: " + sessionNonce.slice(0, 16) + "…" +
+    (datasetFingerprint ? " · Dataset: " + datasetFingerprint : "");
+
+  var bd = document.getElementById("stats-buttons");
+  bd.innerHTML = "";
+
+  if (!allDone) {
+    var cb = document.createElement("button");
+    cb.className = "btn-primary"; cb.textContent = "Continue reviewing";
+    cb.onclick = function() { showScreen("screen-review"); renderCurrentItem(); };
+    bd.appendChild(cb);
+  }
+
+  if (allOriginalsDone || reviewed > 0) {
+    var eb = document.createElement("button");
+    eb.className = allOriginalsDone ? "btn-green" : "btn-secondary";
+    eb.textContent = allOriginalsDone ? "Download validation results" : "Export partial results";
+    eb.onclick = exportResults;
+    bd.appendChild(eb);
+  }
+
+  if (reviewed > 0) {
+    var sb = document.createElement("button");
+    sb.className = "btn-secondary"; sb.textContent = "\uD83D\uDCBE Save progress to file";
+    sb.onclick = saveProgressToFile;
+    bd.appendChild(sb);
+  }
+
+  var bk = document.createElement("button");
+  bk.className = "btn-secondary"; bk.textContent = "\u2190 Change file";
+  bk.onclick = goBackToLoad;
+  bd.appendChild(bk);
+
+  var rb = document.createElement("button");
+  rb.className = "btn-reset"; rb.textContent = "Reset everything";
+  rb.onclick = resetAll;
+  bd.appendChild(rb);
+
+  if (allOriginalsDone) {
+    var db = document.createElement("div");
+    db.className = "done-box";
+    var remaining = shuffledOrder.length - Object.keys(responses).length;
+    db.innerHTML = allDone
+      ? 'All items reviewed. Download the JSON and upload to <code>SFRP/data/audit/sfrp_audit_validation.json</code> on Drive.'
+      : reviewed + ' items reviewed. ' + remaining + ' consistency checks remain — keep going for a self-agreement score.';
+    bd.appendChild(db);
+  }
+
+  showScreen("screen-stats");
+}
+
+
+// ═══════════════════════════════════════════════════════════
+// CONSISTENCY
+// ═══════════════════════════════════════════════════════════
+
+function computeConsistency() {
+  var originals = {}, probes = {};
+  Object.entries(responses).forEach(function(e) {
+    var k = e[0], r = e[1];
+    if (k.indexOf("probe_") === 0) probes[r.index] = r;
+    else originals[r.index] = r;
+  });
+
+  var pairs = [];
+  Object.keys(probes).forEach(function(idx) {
+    if (originals[idx]) {
+      pairs.push({
+        index: parseInt(idx), feature: originals[idx].feature,
+        original: originals[idx].human_verdict, probe: probes[idx].human_verdict,
+        match: originals[idx].human_verdict === probes[idx].human_verdict
+      });
+    }
+  });
+
+  if (pairs.length === 0) return null;
+  var matches = pairs.filter(function(p) { return p.match; }).length;
+  return {
+    pairs: pairs, total_probes: pairs.length, matches: matches,
+    agreement_rate: +(matches / pairs.length * 100).toFixed(1),
+    mismatches: pairs.filter(function(p) { return !p.match; })
+  };
+}
+
+function renderConsistency() {
+  var slot = document.getElementById("consistency-slot");
+  slot.innerHTML = "";
+  if (probeSet.size === 0) return;
+
+  var result = computeConsistency();
+  if (!result || result.total_probes === 0) {
+    var remaining = 0;
+    for (var i = currentIndex; i < shuffledOrder.length; i++) { if (probeSet.has(i)) remaining++; }
+    if (remaining > 0) {
+      var box = document.createElement("div");
+      box.className = "consistency-box";
+      box.innerHTML = '<h3>Self-consistency</h3><p>' + remaining + ' consistency probes remaining — blind re-presentations of items you\'ve already seen.</p>';
+      slot.appendChild(box);
+    }
+    return;
+  }
+
+  var cls = result.agreement_rate >= 90 ? "rate-good" : result.agreement_rate >= 80 ? "rate-warn" : "rate-bad";
+  var box = document.createElement("div");
+  box.className = "consistency-box";
+  var html = '<h3>Self-consistency</h3><div class="consistency-value ' + cls + '">' + result.agreement_rate + '%</div>' +
+    '<p>' + result.matches + ' of ' + result.total_probes + ' re-tested items got the same verdict.</p>';
+  if (result.mismatches.length > 0) {
+    html += '<p style="margin-top:6px;font-size:11px;color:var(--text-faint)">Mismatches: ' +
+      result.mismatches.map(function(m) { return m.feature + '[' + m.index + '] ' + m.original + '→' + m.probe; }).join(', ') + '</p>';
+  }
+  box.innerHTML = html;
+  slot.appendChild(box);
+}
+
+
+// ═══════════════════════════════════════════════════════════
+// EXPORT
+// ═══════════════════════════════════════════════════════════
+
+async function exportResults() {
+  var featureSummary = {};
+  var corrections = [];
+  var originalResponses = [];
+  var probeResponses = [];
+
+  // Quality flag thresholds (ms)
+  var RAPID_THRESHOLD = 1000;
+  var VERY_RAPID_THRESHOLD = 500;
+  var SLOW_THRESHOLD = 30000;
+
+  Object.entries(responses).forEach(function(e) {
+    var k = e[0], r = e[1];
+
+    // Add quality flag based on response time
+    var t = r.response_time_ms;
+    if      (t !== null && t < VERY_RAPID_THRESHOLD) r.quality_flag = "very_rapid";
+    else if (t !== null && t < RAPID_THRESHOLD)      r.quality_flag = "rapid";
+    else if (t !== null && t > SLOW_THRESHOLD)       r.quality_flag = "slow";
+    else                                             r.quality_flag = null;
+
+    if (k.indexOf("probe_") === 0) { probeResponses.push(r); return; }
+    originalResponses.push(r);
+    if (!featureSummary[r.feature]) featureSummary[r.feature] = { correct: 0, wrong: 0, unsure: 0, total: 0 };
+    featureSummary[r.feature].total++;
+    featureSummary[r.feature][r.human_verdict]++;
+    if (r.human_verdict === "wrong" && r.correction) {
+      corrections.push({ index: r.index, feature: r.feature, auto_label: r.auto_label, correction: r.correction, disagree_reasons: r.disagree_reasons || null });
+    }
+  });
+
+  Object.keys(featureSummary).forEach(function(f) {
+    var s = featureSummary[f], dec = s.correct + s.wrong;
+    s.agreement_rate = dec > 0 ? +(s.correct / dec * 100).toFixed(2) : null;
+    s.unsure_rate = s.total > 0 ? +(s.unsure / s.total * 100).toFixed(2) : 0;
+  });
+
+  var totalMs = priorTimeMs + (sessionStartMs ? Date.now() - sessionStartMs : 0);
+  var reviewed = countOriginalResponses();
+
+  // Response time distribution
+  var times = originalResponses.filter(function(r) { return r.response_time_ms > 0; })
+    .map(function(r) { return r.response_time_ms; }).sort(function(a, b) { return a - b; });
+  var timingStats = null;
+  if (times.length > 0) {
+    var sum = times.reduce(function(a, b) { return a + b; }, 0);
+    timingStats = {
+      mean_ms:   Math.round(sum / times.length),
+      median_ms: Math.round(times[Math.floor(times.length / 2)]),
+      p10_ms:    Math.round(times[Math.floor(times.length * 0.1)]),
+      p90_ms:    Math.round(times[Math.floor(times.length * 0.9)]),
+      min_ms:    times[0],
+      max_ms:    times[times.length - 1]
+    };
+  }
+
+  // Quality flag summary
+  var flagCounts = { very_rapid: 0, rapid: 0, slow: 0, normal: 0 };
+  originalResponses.forEach(function(r) {
+    if (r.quality_flag) flagCounts[r.quality_flag]++;
+    else flagCounts.normal++;
+  });
+
+  // ── Ground truth analysis (only if dataset has _ground_truth) ──
+  var groundTruth = null;
+  if (hasGroundTruth && dataset) {
+    var planted = [];      // items where auto_label ≠ _ground_truth (deliberate errors)
+    var correct_items = []; // items where auto_label == _ground_truth
+
+    originalResponses.forEach(function(r) {
+      var item = dataset.items[r.index];
+      if (!item || item._ground_truth === undefined) return;
+      var isPlantedError = String(item.auto_label) !== String(item._ground_truth);
+      if (isPlantedError) planted.push(r);
+      else correct_items.push(r);
+    });
+
+    var detected   = planted.filter(function(r) { return r.human_verdict === "wrong"; });
+    var missed     = planted.filter(function(r) { return r.human_verdict === "correct"; });
+    var unsureErr  = planted.filter(function(r) { return r.human_verdict === "unsure"; });
+    var falsePos   = correct_items.filter(function(r) { return r.human_verdict === "wrong"; });
+
+    // Per-feature detection breakdown
+    var perFeatureDetection = {};
+    planted.forEach(function(r) {
+      if (!perFeatureDetection[r.feature]) perFeatureDetection[r.feature] = { planted: 0, detected: 0, missed: 0, unsure: 0 };
+      perFeatureDetection[r.feature].planted++;
+      if (r.human_verdict === "wrong")  perFeatureDetection[r.feature].detected++;
+      if (r.human_verdict === "correct") perFeatureDetection[r.feature].missed++;
+      if (r.human_verdict === "unsure") perFeatureDetection[r.feature].unsure++;
+    });
+
+    groundTruth = {
+      planted_errors:       planted.length,
+      errors_detected:      detected.length,
+      errors_missed:        missed.length,
+      errors_unsure:        unsureErr.length,
+      detection_rate:       planted.length > 0 ? +(detected.length / planted.length * 100).toFixed(1) : null,
+      false_positives:      falsePos.length,
+      false_positive_rate:  correct_items.length > 0 ? +(falsePos.length / correct_items.length * 100).toFixed(1) : null,
+      per_feature:          perFeatureDetection,
+      missed_error_indices: missed.map(function(r) { return r.index; }).sort(function(a, b) { return a - b; }),
+      false_positive_indices: falsePos.map(function(r) { return r.index; }).sort(function(a, b) { return a - b; })
+    };
+  }
+
+  var exp = {
+    tool_version:        TOOL_VERSION,
+    sfrp_version:        SFRP_VERSION,
+    audit_type:          "auto_label_validation",
+    reviewer:            await computeReviewerId(reviewerName),
+    session_nonce:       sessionNonce,
+    completed_at:        new Date().toISOString(),
+    dataset_fingerprint: datasetFingerprint,
+
+    total_reviewed:      reviewed,
+    total_items:         originalItemCount,
+    total_review_time_minutes: +(totalMs / 60000).toFixed(1),
+    avg_seconds_per_item:      +(totalMs / 1000 / Math.max(1, reviewed)).toFixed(2),
+    response_time_distribution: timingStats,
+    quality_flags:       flagCounts,
+
+    // Aggregate: which disagreement reasons appeared and how often
+    disagree_reason_summary: (function() {
+      var rc = {};
+      originalResponses.forEach(function(r) {
+        if (!r.disagree_reasons) return;
+        r.disagree_reasons.forEach(function(reason) { rc[reason] = (rc[reason] || 0) + 1; });
+      });
+      return Object.keys(rc).length > 0 ? rc : null;
+    })(),
+
+    // Contribution summary for the reviewer
+    contribution: {
+      reviewer_id:      await computeReviewerId(reviewerName),
+      items_reviewed:   reviewed,
+      errors_caught:    originalResponses.filter(function(r) { return r.human_verdict === "wrong"; }).length,
+      ambiguities_flagged: originalResponses.filter(function(r) { return r.human_verdict === "unsure"; }).length,
+      features_covered: Object.keys(featureSummary).length,
+      time_minutes:     +(totalMs / 60000).toFixed(1),
+      avg_seconds:      +(totalMs / 1000 / Math.max(1, reviewed)).toFixed(1)
+    },
+
+    schema_notes: {
+      agreement_rate:   "correct / (correct + wrong) × 100. 'unsure' excluded from denominator. null if all unsure.",
+      human_verdict:    "Canonical label field. Values: 'correct', 'wrong', 'unsure'.",
+      correction:       "When verdict is 'wrong': reviewer's suggested correct label, or null if skipped.",
+      is_probe:         "true = blind consistency re-test of an already-reviewed item.",
+      response_time_ms: "Milliseconds between item display and verdict tap. null if unavailable.",
+      quality_flag:     "null = normal. 'rapid' = < 1s. 'very_rapid' = < 0.5s (autopilot risk). 'slow' = > 30s.",
+      disagree_reasons: "Array of reason tags/comments for 'wrong' and 'unsure' verdicts. null if none selected.",
+      chain_hash:       "FNV-1a hash chain link. Each response includes hash of prior state — editing any response breaks the chain downstream.",
+      integrity_sha256: "SHA-256 over all response keys, verdicts, corrections, reasons, indices, features, and probe flags. Detects any post-export tampering.",
+      session_nonce:    "Random 128-bit token generated once per browser session. Proves all responses originated from the same session.",
+      hash_chain_head:  "Final hash chain value. Recomputing the chain from genesis through all responses in order should reproduce this value.",
+      self_consistency:  "Agreement rate between original and probe verdicts for the same items.",
+      ground_truth:     "If dataset includes _ground_truth field: detection accuracy of the reviewer against known-correct labels. " +
+                        "detection_rate = errors caught / errors planted. false_positive_rate = correct items marked wrong / correct items total."
+    },
+
+    per_feature_summary:  featureSummary,
+    corrections_summary:  corrections.sort(function(a, b) { return a.index - b.index; }),
+    self_consistency:      computeConsistency(),
+    ground_truth:          groundTruth,
+    checksum:             computeChecksum(),
+    integrity_sha256:     await computeIntegrityHash(),
+    hash_chain_head:      hashChainHead,
+    responses:            originalResponses.sort(function(a, b) { return a.index - b.index; }),
+    probe_responses:      probeResponses.sort(function(a, b) { return a.index - b.index; })
+  };
+
+  var blob = new Blob([JSON.stringify(exp, null, 2)], { type: "application/json" });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement("a");
+  var suffix = datasetFingerprint ? "_" + datasetFingerprint.slice(0, 8) : "";
+  var rid = await computeReviewerId(reviewerName);
+  var nameSuffix = rid !== "anonymous" ? "_" + rid : "";
+  a.href = url; a.download = "sfrp_audit_validation" + nameSuffix + suffix + ".json";
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a); URL.revokeObjectURL(url);
+}
+
+
+// ═══════════════════════════════════════════════════════════
+// BACK TO LOAD / RESET
+// ═══════════════════════════════════════════════════════════
+
+function goBackToLoad() {
+  if (awaitingCorrection || awaitingReason) return;
+  var n = countOriginalResponses();
+  if (n > 0) {
+    if (!confirm("Go back to the file selection screen?\n\nYour progress (" + n + " items) is saved — you can resume or load a different file.")) return;
+  }
+  showScreen("screen-load");
+  checkForResumableSession();
+}
+
+function resetAll() {
+  var n = countOriginalResponses();
+  if (!confirm(n > 0
+    ? "Erase ALL progress (" + n + " reviewed items)? This cannot be undone."
+    : "Erase all data? This cannot be undone."
+  )) return;
+
+  try { localStorage.removeItem(LS_KEY_DATASET); }  catch (e) {}
+  try { localStorage.removeItem(LS_KEY_RESPONSES); } catch (e) {}
+
+  dataset = null; responses = {}; currentIndex = 0; shuffledOrder = [];
+  probeSet = new Set(); originalItemCount = 0;
+  sessionStartMs = null; priorTimeMs = 0; itemShownAtMs = null;
+  saveDegraded = false; fatigueAcked = false;
+  awaitingCorrection = false; pendingWrongKey = null;
+  awaitingReason = false; pendingReasonKey = null; selectedReasons = [];
+  hasGroundTruth = false; originalResponseCount = 0;
+  processingResponse = false;
+
+  var w = document.getElementById("save-degraded-warning"); if (w) w.remove();
+  document.getElementById("fatigue-slot").innerHTML = "";
+  document.getElementById("json-paste").value = "";
+  document.getElementById("file-input").value = "";
+  document.getElementById("save-file-input").value = "";
+  document.getElementById("load-btn").disabled = true;
+  document.getElementById("resume-section").style.display = "none";
+  document.getElementById("load-info").style.display = "none";
+  document.getElementById("load-warn").style.display = "none";
+  showScreen("screen-load");
+}
+
+function showScreen(id) {
+  document.querySelectorAll(".screen").forEach(function(el) { el.classList.remove("active"); });
+  var screen = document.getElementById(id);
+  screen.classList.add("active");
+
+  // Focus management: move focus to the screen's first interactive element
+  // This ensures keyboard and screen reader users aren't stranded
+  requestAnimationFrame(function() {
+    var target = screen.querySelector("button:not(:disabled), [tabindex]");
+    if (target) target.focus();
+  });
+}
+</script>
+</body>
+</html>

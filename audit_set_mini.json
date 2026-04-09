@@ -1,0 +1,95 @@
+{
+  "items": [
+    {
+      "auto_label": "causal",
+      "feature": "cause_effect",
+      "sentence": "It doesn't seem that way because the State is more in-your-face than it has been in all of American history."
+    },
+    {
+      "auto_label": "non_causal",
+      "feature": "cause_effect",
+      "sentence": "And, after several Eastern European states had joined, suddenly the whole of Europe could tap into the talent produced from Soviet-era education systems built around engineering and maths."
+    },
+    {
+      "auto_label": "comparative",
+      "feature": "comparison",
+      "sentence": "But in recent months, the Kochs have committed more resources to backing Trump's agenda, including a multimillion-dollar campaign to help push Trump's tax cuts through the GOP-controlled Congress."
+    },
+    {
+      "auto_label": "positive",
+      "feature": "comparison",
+      "sentence": "The subtext rang of pity rather than condemnation, and the same was true of many other Australians and other foreigners I met while traveling through the country over the course of two weeks in October."
+    },
+    {
+      "auto_label": "complex",
+      "feature": "complexity",
+      "sentence": "There were kids in the road, cars beeping and swerving."
+    },
+    {
+      "auto_label": "simple",
+      "feature": "complexity",
+      "sentence": "Isn't Iran a dire threat of smoking guns and mushroom clouds?"
+    },
+    {
+      "auto_label": "affirmed",
+      "feature": "negation",
+      "sentence": "Recall that the Prenda shell AF Holdings, which sued hundreds of people, involved copyrights to adult movies."
+    },
+    {
+      "auto_label": "negated",
+      "feature": "negation",
+      "sentence": "They could not recall one instance when anyone from the Law Department raised a major concern about a case."
+    },
+    {
+      "auto_label": "plural",
+      "feature": "number",
+      "sentence": "And people from both parties are generally supportive of ending all fossil fuel subsidies, although Democrats (67 percent) are more supportive of that policy than Republicans (52 percent)."
+    },
+    {
+      "auto_label": "singular",
+      "feature": "number",
+      "sentence": "The initDatabases function call initializes database connections and makes the connections accessible via the dbs variable."
+    },
+    {
+      "auto_label": "formal",
+      "feature": "register",
+      "sentence": "Opponents of the expansion into upper Knowland Park filed an environmental lawsuit after the approval, but they subsequently lost and did not appeal."
+    },
+    {
+      "auto_label": "informal",
+      "feature": "register",
+      "sentence": "The big question with him, as with most guys his size, was whether he would be able to make consistent contact against high-level pitching."
+    },
+    {
+      "auto_label": "negative",
+      "feature": "sentiment",
+      "sentence": "But Washington state\u2019s deadliest natural disaster since the 1980 Mount St. Helens volcanic eruption \u2014 and one of the worst in a century \u2014 came to a miraculous stop in Langton\u2019s back yard."
+    },
+    {
+      "auto_label": "positive",
+      "feature": "sentiment",
+      "sentence": "You must figure out which weapon configurations work best with your mech and your playstyle, and then how to effectively use them in combat."
+    },
+    {
+      "auto_label": "future",
+      "feature": "tense",
+      "sentence": "If Sullinger is not available Saturday, the Celtics\u2019 bench will consist of Chris Johnson, Phil Pressey, Joel Anthony and Babb."
+    },
+    {
+      "auto_label": "past",
+      "feature": "tense",
+      "sentence": "But they and other Russian-Americans were dismayed when they learned that California was planning to close Fort Ross."
+    },
+    {
+      "auto_label": "active",
+      "feature": "voice",
+      "sentence": "The \u201cspurious correlations\u201d compiled by Harvard law student Tyler Vigen and displayed on his website (tylervigen.com) should be a warning."
+    },
+    {
+      "auto_label": "passive",
+      "feature": "voice",
+      "sentence": "A total of $6.25 billion in veterans benefits could be delayed to more than 5 million veterans, troops, families and children of deceased military members if the shutdown continues through the end of October, according to Veterans Affairs Secretary Eric Shinseki."
+    }
+  ],
+  "fingerprint": "dcf73379f272dc36"
+}
