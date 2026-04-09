@@ -1,0 +1,42 @@
+name: Compile Annotation Results
+
+on:
+  push:
+    branches: [main]
+    paths: ['results/*.json']
+
+permissions:
+  contents: write
+
+jobs:
+  compile:
+    name: Compile & Report
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install scikit-learn numpy
+
+      - name: Compile results
+        run: python compile_results.py results/*.json
+
+      - name: Run kappa pipeline (if 2+ files)
+        run: |
+          N=$(ls results/*.json 2>/dev/null | wc -l)
+          if [ "$N" -ge 2 ]; then
+            echo "--- Running inter-rater agreement ---"
+            python sfrp_kappa_pipeline.py results/*.json | tee -a results/REPORT.md
+          fi
+
+      - name: Commit report
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add results/REPORT.md
+          git diff --cached --quiet || git commit -m "Auto-compile annotation results"
+          git push
