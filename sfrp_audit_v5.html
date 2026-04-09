@@ -2018,7 +2018,26 @@ function dismissChunkBreak() {
 // ═══════════════════════════════════════════════════════════
 
 function undoLastResponse() {
-  if (currentIndex === 0 || awaitingCorrection || awaitingReason) return;
+  // During correction/reason flow: cancel the in-progress action
+  if (awaitingCorrection || awaitingReason) {
+    // Delete the partially-stored response
+    var cancelKey = pendingWrongKey || pendingReasonKey;
+    if (cancelKey) {
+      var wasProbe = responses[cancelKey] && responses[cancelKey].is_probe;
+      if (responses[cancelKey] && !wasProbe) originalResponseCount--;
+      delete responses[cancelKey];
+    }
+    awaitingCorrection = false;
+    awaitingReason = false;
+    pendingWrongKey = null;
+    pendingReasonKey = null;
+    processingResponse = false;
+    persistResponses();
+    renderCurrentItem(); // re-shows response buttons for current item
+    return;
+  }
+
+  if (currentIndex === 0) return;
   currentIndex--;
   var itemIndex = shuffledOrder[currentIndex];
   var item = dataset.items[itemIndex];
