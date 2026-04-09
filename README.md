@@ -6,7 +6,7 @@ A single-file, zero-dependency annotation tool for validating auto-generated lin
 
 **Option A — Online (recommended):**
 Open the tool directly:  
-👉 [**Launch HERMES**](https://psiVonPhi.github.io/HermesAnnot/sfrp_audit_v5.html)
+👉 [**Launch HERMES**](https://RenSolvyn.github.io/HermesAnnot/sfrp_audit_v5.html)
 
 **Option B — Offline:**
 1. Download `sfrp_audit_v5.html` and `audit_set.json`
@@ -77,5 +77,7 @@ Your results are compared with other reviewers using Cohen's κ to measure inter
 - 40 automated tests (Playwright) covering desktop, mobile touch, and edge cases
 
 ---
+
+*Part of the SFRP (Structured Feature Research Program) — investigating semantic geometry in transformer embedding spaces.*
 
 *Part of the SFRP (Structured Feature Research Program) — investigating semantic geometry in transformer embedding spaces.*
