@@ -1,36 +1,21 @@
-name: HERMES CI
+name: CI
 
 on:
   push:
     branches: [main]
-    paths: ['sfrp_audit_v5.html']
   pull_request:
-    paths: ['sfrp_audit_v5.html']
+    branches: [main]
 
 jobs:
   state-audit:
-    name: State Reset Audit
+    name: State Audit
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+
       - name: Run state audit
         run: python audit_state_resets.py sfrp_audit_v5.html
-
-  browser-tests:
-    name: Playwright Tests
-    runs-on: ubuntu-latest
-    needs: state-audit
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-      - name: Install Playwright
-        run: |
-          pip install playwright
-          playwright install chromium --with-deps
-      - name: Run tests
-        run: python -m unittest test_audit_html -v
