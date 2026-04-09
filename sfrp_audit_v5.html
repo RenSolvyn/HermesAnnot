@@ -1420,10 +1420,20 @@ function processInput(text) {
   saveDegraded       = false;
   fatigueAcked       = false;
   awaitingCorrection = false;
+  awaitingReason     = false;
+  pendingWrongKey    = null;
+  pendingReasonKey   = null;
+  selectedReasons    = [];
   processingResponse = false;
   originalResponseCount = 0;
   originalItemCount  = data.items.length;
   hasGroundTruth     = data.items.some(function(it) { return it._ground_truth !== undefined; });
+  chunkItemCount     = 0;
+  currentStreak      = 0;
+  longestStreak      = 0;
+  totalSessionItems  = 0;
+  sessionNonce       = Math.random().toString(36).slice(2, 10);
+  hashChainHead      = "genesis";
 
   var built      = buildShuffledOrder(data);
   shuffledOrder  = built.order;
@@ -1485,7 +1495,15 @@ function resumeSession() {
     saveDegraded       = false;
     fatigueAcked       = false;
     awaitingCorrection = false;
+    awaitingReason     = false;
+    pendingWrongKey    = null;
+    pendingReasonKey   = null;
+    selectedReasons    = [];
     processingResponse = false;
+    chunkItemCount     = 0;
+    currentStreak      = 0;
+    longestStreak      = 0;
+    totalSessionItems  = 0;
     reviewerName       = sr.reviewerName || "";
     if (sr.sessionNonce) sessionNonce = sr.sessionNonce;
     if (sr.hashChainHead) hashChainHead = sr.hashChainHead;
@@ -2822,6 +2840,8 @@ function resetAll() {
   awaitingReason = false; pendingReasonKey = null; selectedReasons = [];
   hasGroundTruth = false; originalResponseCount = 0;
   processingResponse = false;
+  chunkItemCount = 0; currentStreak = 0; longestStreak = 0; totalSessionItems = 0;
+  reviewerName = ""; sessionNonce = ""; hashChainHead = "genesis";
 
   var w = document.getElementById("save-degraded-warning"); if (w) w.remove();
   document.getElementById("fatigue-slot").innerHTML = "";
