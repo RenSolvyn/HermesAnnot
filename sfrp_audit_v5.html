@@ -24,7 +24,38 @@
 
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+  /* Dark-first: default is dark, [data-theme="light"] overrides */
   :root {
+    --bg:          #131F24;
+    --bg-subtle:   #1F2D33;
+    --bg-muted:    #2B3940;
+    --text:        #F0F0F0;
+    --text-dim:    #B0B0B0;
+    --text-faint:  #707070;
+    --border:      #3A4A52;
+
+    --green:        #58CC02;
+    --green-bg:     #1A3A12;
+    --green-border: #58CC02;
+    --green-shadow: #3A8A00;
+
+    --red:          #FF4B4B;
+    --red-bg:       #3A1818;
+    --red-border:   #FF4B4B;
+    --red-shadow:   #CC2020;
+
+    --amber:        #FFC800;
+    --amber-bg:     #332A0A;
+    --amber-border: #FFC800;
+
+    --blue:         #1CB0F6;
+    --blue-bg:      #0A2A3A;
+
+    --purple:       #C090F0;
+    --purple-bg:    #201530;
+  }
+
+  [data-theme="light"] {
     --bg:          #F0F0F0;
     --bg-subtle:   #FFFFFF;
     --bg-muted:    #E5E5E5;
@@ -54,42 +85,10 @@
     --purple-bg:    #F5EDFF;
   }
 
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --bg:          #131F24;
-      --bg-subtle:   #1F2D33;
-      --bg-muted:    #2B3940;
-      --text:        #F0F0F0;
-      --text-dim:    #B0B0B0;
-      --text-faint:  #707070;
-      --border:      #3A4A52;
-
-      --green:        #58CC02;
-      --green-bg:     #1A3A12;
-      --green-border: #58CC02;
-      --green-shadow: #3A8A00;
-
-      --red:          #FF4B4B;
-      --red-bg:       #3A1818;
-      --red-border:   #FF4B4B;
-      --red-shadow:   #CC2020;
-
-      --amber:        #FFC800;
-      --amber-bg:     #332A0A;
-      --amber-border: #FFC800;
-
-      --blue:         #1CB0F6;
-      --blue-bg:      #0A2A3A;
-
-      --purple:       #C090F0;
-      --purple-bg:    #201530;
-    }
-  }
-
-  html { overflow-x: hidden; }
+  html { overflow-x: hidden; background: var(--bg); }
   body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
-    background: #131F24;
+    background: var(--bg);
     color: var(--text);
     max-width: 540px;
     margin: 0 auto;
@@ -143,34 +142,32 @@
   #screen-load .drop-zone:hover,
   #screen-load .drop-zone.dragover { border-color: #6cb4ee; background: rgba(108,180,238,0.08); }
 
-  @media (prefers-color-scheme: light) {
-    #screen-load {
+    [data-theme="light"] #screen-load {
       background: linear-gradient(135deg, #eef2f7 0%, #dce6f2 40%, #f0f3f8 100%);
       color: #1a1a18;
     }
     #screen-load .subtitle,
-    #screen-load .or-divider { color: var(--text-dim); }
+  [data-theme="light"] #screen-load .or-divider { color: var(--text-dim); }
     #screen-load .or-divider::before,
     #screen-load .or-divider::after { background: var(--border); }
-    #screen-load .drop-zone-label { color: var(--text-dim); }
-    #screen-load .drop-zone-label b { color: var(--blue); }
-    #screen-load .drop-zone-icon { color: var(--text-faint); }
-    #screen-load .error-msg { background: var(--red-bg); border-color: var(--red-border); color: var(--red); }
-    #screen-load .warn-msg { background: var(--amber-bg); border-color: var(--amber-border); color: var(--amber); }
-    #screen-load .info-box { background: rgba(255,255,255,0.55); border-color: rgba(0,0,0,0.06); color: var(--text-dim); }
-    #screen-load .info-box .count { color: var(--text); }
-    #screen-load .btn-primary { background: var(--blue); }
-    #screen-load textarea.paste-box {
+  [data-theme="light"] #screen-load .drop-zone-label { color: var(--text-dim); }
+  [data-theme="light"] #screen-load .drop-zone-label b { color: var(--blue); }
+  [data-theme="light"] #screen-load .drop-zone-icon { color: var(--text-faint); }
+  [data-theme="light"] #screen-load .error-msg { background: var(--red-bg); border-color: var(--red-border); color: var(--red); }
+  [data-theme="light"] #screen-load .warn-msg { background: var(--amber-bg); border-color: var(--amber-border); color: var(--amber); }
+  [data-theme="light"] #screen-load .info-box { background: rgba(255,255,255,0.55); border-color: rgba(0,0,0,0.06); color: var(--text-dim); }
+  [data-theme="light"] #screen-load .info-box .count { color: var(--text); }
+  [data-theme="light"] #screen-load .btn-primary { background: var(--blue); }
+  [data-theme="light"] #screen-load textarea.paste-box {
       background: rgba(255,255,255,0.7); border-color: rgba(0,0,0,0.08); color: var(--text);
     }
     #screen-load textarea.paste-box::placeholder { color: var(--text-faint); }
-    #screen-load .drop-zone { border-color: rgba(43,87,151,0.25); background: transparent; }
+  [data-theme="light"] #screen-load .drop-zone { border-color: rgba(43,87,151,0.25); background: transparent; }
     #screen-load .drop-zone:hover,
-    #screen-load .drop-zone.dragover { border-color: var(--blue); background: var(--blue-bg); }
-    #screen-load #hero-title { color: #1a1a18 !important; }
-    #screen-load #hero-sub { color: #5f5e5a !important; }
-    #screen-load #hero-sub2 { color: #5f5e5a !important; }
-  }
+  [data-theme="light"] #screen-load .drop-zone.dragover { border-color: var(--blue); background: var(--blue-bg); }
+  [data-theme="light"] #screen-load #hero-title { color: #1a1a18 !important; }
+  [data-theme="light"] #screen-load #hero-sub { color: #5f5e5a !important; }
+  [data-theme="light"] #screen-load #hero-sub2 { color: #5f5e5a !important; }
 
   /* Mobile: prevent double-tap zoom delay on ALL interactive elements */
   button, a, .drop-zone, .correction-chip, .reason-chip, .response-btn,
@@ -237,13 +234,11 @@
   }
   .glass-card:hover { border-color: rgba(108,180,238,0.2); }
 
-  @media (prefers-color-scheme: light) {
-    .glass-card {
+    [data-theme="light"] .glass-card {
       background: rgba(255,255,255,0.55);
       border-color: rgba(0,0,0,0.06);
     }
     .glass-card:hover { border-color: rgba(43,87,151,0.2); }
-  }
 
   .glass-label {
     font-size: 11px; font-weight: 500; letter-spacing: 1px;
@@ -264,9 +259,8 @@
   }
   .glass-input::placeholder { color: #5f5e5a; }
 
-  @media (prefers-color-scheme: light) {
-    .glass-label { color: var(--text-faint); }
-    .glass-input {
+    [data-theme="light"] .glass-label { color: var(--text-faint); }
+  [data-theme="light"] .glass-input {
       background: rgba(255,255,255,0.7);
       border-color: rgba(0,0,0,0.08);
       color: var(--text);
@@ -276,7 +270,6 @@
       border-color: rgba(43,87,151,0.4);
       box-shadow: 0 0 0 3px rgba(43,87,151,0.08);
     }
-  }
 
   /* ── Drop zone ── */
   .drop-zone {
@@ -703,6 +696,8 @@
 <div id="screen-load" class="screen active" role="main" aria-label="Load dataset">
   <div style="position:relative;z-index:1">
 
+  <button id="theme-toggle" onclick="toggleTheme()" aria-label="Toggle light/dark mode" title="Toggle theme" style="position:absolute;top:8px;right:0;z-index:10;width:36px;height:36px;border-radius:50%;border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.08);color:#ccc;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background 0.2s,border-color 0.2s,color 0.2s">&#9790;</button>
+
   <div id="hero-section" style="text-align:center;padding:40px 0 24px 0">
     <h1 id="hero-title" style="font-size:28px;font-weight:700;letter-spacing:3px;margin:0;opacity:0;transform:translateY(12px);transition:all 1.2s cubic-bezier(0.16,1,0.3,1);color:#e8e6df">HERMES</h1>
     <p id="hero-sub" style="font-size:11px;letter-spacing:5px;text-transform:uppercase;margin-top:8px;opacity:0;transition:opacity 1.5s ease 0.6s;color:#888780">The gate must hold</p>
@@ -826,6 +821,41 @@
 </div>
 
 <script>
+// ═══════════════════════════════════════════════════════════
+// THEME: dark-first, toggle persisted in localStorage
+// ═══════════════════════════════════════════════════════════
+(function initTheme() {
+  var saved = null;
+  try { saved = localStorage.getItem("hermes-theme"); } catch(e) {}
+  // Default: dark. Only go light if explicitly saved as "light".
+  var theme = (saved === "light") ? "light" : "dark";
+  document.documentElement.setAttribute("data-theme", theme);
+  updateToggleIcon(theme);
+})();
+
+function updateToggleIcon(theme) {
+  var btn = document.getElementById("theme-toggle");
+  if (!btn) return;
+  if (theme === "light") {
+    btn.innerHTML = "&#9728;"; // sun
+    btn.style.color = "#555";
+    btn.style.borderColor = "rgba(0,0,0,0.12)";
+    btn.style.background = "rgba(255,255,255,0.6)";
+  } else {
+    btn.innerHTML = "&#9790;"; // moon
+    btn.style.color = "#ccc";
+    btn.style.borderColor = "rgba(255,255,255,0.15)";
+    btn.style.background = "rgba(255,255,255,0.08)";
+  }
+}
+
+function toggleTheme() {
+  var current = document.documentElement.getAttribute("data-theme");
+  var next = (current === "light") ? "dark" : "light";
+  document.documentElement.setAttribute("data-theme", next);
+  updateToggleIcon(next);
+  try { localStorage.setItem("hermes-theme", next); } catch(e) {}
+}
 /* ═══════════════════════════════════════════════════════════
    SFRP Label Audit Tool — v5.0
    ═══════════════════════════════════════════════════════════
@@ -1064,7 +1094,7 @@ var totalSessionItems = 0;  // total items done this session (for messages)
   if (!canvas) return;
   var ctx = canvas.getContext("2d");
   var W, H, cx, cy, t = 0, animId;
-  var isDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+  var isDark = document.documentElement.getAttribute("data-theme") !== "light";
   var particles = [], gridNodes = [], connections = [];
   var mouse = { x: -1000, y: -1000 };
 
@@ -1316,9 +1346,11 @@ var totalSessionItems = 0;  // total items done this session (for messages)
   });
   observer.observe(document.getElementById("screen-load"), { attributes: true, attributeFilter: ["class"] });
 
-  window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", function(e) {
-    isDark = e.matches;
+  // Listen for theme toggle
+  var themeObserver = new MutationObserver(function() {
+    isDark = document.documentElement.getAttribute("data-theme") !== "light";
   });
+  themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
 })();
 
 
